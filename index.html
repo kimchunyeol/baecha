@@ -65,7 +65,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .edit,.del{padding:4px 8px;font-size:13px;border-radius:5px}
 .del{color:var(--c3)}
 .del.armed{background:var(--c3);border-color:var(--c3);color:var(--panel);font-weight:700}
-.foot .right{display:flex;gap:8px;flex-wrap:wrap}
+.foot .right,.backup .right{display:flex;gap:8px;flex-wrap:wrap}
+.backup{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--muted)}
+.backup strong{color:var(--ink);font-size:15px;margin-right:8px}
+.backup.warn{border-color:var(--accent);border-width:2px}
+.backup.warn #bkInfo{color:var(--ink);font-weight:700}
+.filebtn{display:inline-flex;align-items:center;font-size:14px;font-weight:400;color:var(--ink);cursor:pointer;border-radius:6px;border:1px solid var(--line);background:var(--panel);padding:8px 12px}
 #clearDay.armed{background:var(--c3);border-color:var(--c3);color:var(--panel);font-weight:700}
 .add{margin:6px 12px 12px;border-style:dashed;color:var(--muted)}
 .foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;color:var(--muted);font-size:13px}
@@ -173,6 +178,18 @@ body{margin:0}
       <button id="clearDay">이 날 배차 전부 지우기</button>
       <button id="carry">상차만 → 내일로 넘기기</button>
     </span>
+  </div>
+
+  <div class="backup">
+    <div>
+      <strong>백업</strong>
+      <span id="bkInfo"></span>
+    </div>
+    <div class="right">
+      <button id="bkSave" class="primary">백업 파일 저장</button>
+      <label class="filebtn" for="bkFile">백업 불러오기</label>
+      <input type="file" id="bkFile" accept=".json,application/json" hidden>
+    </div>
   </div>
 </div>
 
@@ -512,6 +529,56 @@ $('#carry').onclick=()=>{
   });
   save(); cur=nd; render();
   $('#hint').textContent=`${n}대를 ${nd} 익착 칸으로 넘겼습니다. 하차지는 ‘수정’으로 넣어 주세요.`;
+};
+
+// 백업: 전체 배차를 파일 하나로 저장 / 불러오기
+function bkInfo(){
+  const days=new Set(db.items.map(i=>i.day)).size;
+  const last=db.lastBackup;
+  let msg=`배차 ${days}일치 저장됨 · `;
+  let warn=false;
+  if(!last){msg+='아직 백업한 적 없음';warn=days>0}
+  else{
+    const ago=Math.floor((new Date(today+'T00:00')-new Date(last+'T00:00'))/86400000);
+    msg+=ago<=0?'오늘 백업함':`마지막 백업 ${ago}일 전`;
+    warn=ago>=7;
+    if(warn)msg+=' · 백업할 때가 됐어요';
+  }
+  $('#bkInfo').textContent=msg;
+  $('.backup').classList.toggle('warn',warn);
+}
+const _render2=render;
+render=function(){_render2();bkInfo()};
+
+$('#bkSave').onclick=()=>{
+  db.lastBackup=today; save();
+  const blob=new Blob([JSON.stringify(db,null,1)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`배차판-백업-${today}.json`;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  bkInfo();
+  $('#hint').textContent='백업 파일을 저장했습니다. 다운로드 폴더를 확인하세요.';
+};
+$('#bkFile').onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const v=JSON.parse(r.result);
+      if(!v||!Array.isArray(v.items))throw 0;
+      // 합치기: 같은 날짜는 백업 파일 내용으로 바꿈
+      const days=new Set(v.items.map(i=>i.day));
+      db.items=db.items.filter(i=>!days.has(i.day));
+      v.items.forEach(i=>db.items.push({...i,id:db.next++}));
+      db.hol={...(db.hol||{}),...(v.hol||{})};
+      save();render();
+      $('#hint').textContent=`백업에서 ${days.size}일치를 불러왔습니다.`;
+    }catch(err){$('#hint').textContent='배차판 백업 파일이 아닙니다. 파일 이름이 "배차판-백업-…json"인지 확인하세요.'}
+    e.target.value='';
+  };
+  r.readAsText(f);
 };
 
 render();
