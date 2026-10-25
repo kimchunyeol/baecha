@@ -90,6 +90,15 @@ textarea.mono{font-family:var(--f-mono);font-size:14px;line-height:1.5}
 .cal-head strong{font-family:var(--f-mono);font-size:16px}
 .cal-head small{color:var(--muted);font-size:12px}
 .fold{width:100%;margin-top:8px;padding:6px;font-size:13px;color:var(--muted);background:none;border-style:dashed}
+.pickwrap{display:flex;flex-direction:column;gap:6px}
+.pickhead{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--muted)}
+.pickhead b{color:var(--ink)}
+.linkbtn{border:none;background:none;padding:2px 0;font-size:12px;color:var(--c1);text-decoration:underline}
+.picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;max-height:230px;overflow:auto;padding:2px}
+.pick{font-family:var(--f-mono);font-weight:600;font-size:15px;padding:9px 2px;font-variant-numeric:tabular-nums}
+.pick.used{opacity:.4}
+.pick.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);opacity:1}
+.pnote{color:var(--muted);font-size:11px}
 .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
 .cal-wd{text-align:center;font-size:12px;color:var(--muted);font-weight:700;padding:2px 0}
 .cal-day{border:1px solid transparent;background:var(--bg);border-radius:6px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:50px;font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums}
@@ -177,6 +186,7 @@ body{margin:0}
   <div class="foot">
     <span id="hint">줄을 누르면 완료 표시. ‘상차만’ 차는 내일로 넘기면 내일 익착 칸에 들어갑니다.</span>
     <span class="right">
+      <button id="fleetBtn">차량 목록</button>
       <button id="clearDay">이 날 배차 전부 지우기</button>
       <button id="carry">상차만 → 내일로 넘기기</button>
     </span>
@@ -195,6 +205,16 @@ body{margin:0}
   </div>
 </div>
 
+<!-- 차량 목록 -->
+<div class="sheet" id="sFleet" hidden>
+  <form class="box" id="fFleet">
+    <h3>차량 목록</h3>
+    <p>회사 차 번호를 띄어쓰기나 줄바꿈으로 넣으세요. 배차 추가 창에서 눌러서 여러 대를 한 번에 고를 수 있어요. 배차할 때 새로 쓴 번호는 여기에 저절로 더해져요.</p>
+    <textarea id="fleetTxt" class="mono full" rows="8" placeholder="1234 5678 9012"></textarea>
+    <div class="btns"><span class="left" id="fleetN"></span><button type="button" data-close>취소</button><button type="submit" class="primary">저장</button></div>
+  </form>
+</div>
+
 <!-- 수정/추가 -->
 <div class="sheet" id="sEdit" hidden>
   <form class="box" id="fEdit">
@@ -202,6 +222,11 @@ body{margin:0}
     <label>화주<select id="e-group"><option value="unid">유니드</option><option value="kj">광진</option></select></label>
     <label>종류<select id="e-kind"><option value="unload">익착 (어제 상차 → 오늘 하차)</option><option value="same">당착 (오늘 상차 → 오늘 하차)</option><option value="load">상차만</option></select></label>
     <label class="full">차번 (띄어쓰기로 여러 대)<input id="e-cars" placeholder="1234 5678" inputmode="numeric" required></label>
+    <div class="full pickwrap">
+      <div class="pickhead"><span>눌러서 차 고르기 <b id="pickCount"></b></span><button type="button" id="pickFleet" class="linkbtn">차량 목록 고치기</button></div>
+      <div class="picker" id="picker"></div>
+      <small class="pnote">흐린 번호는 이 날 이미 배차된 차예요.</small>
+    </div>
     <label class="full" id="w-place">하차지·시간<input id="e-place" placeholder="천보 14시"></label>
     <label id="w-item">상차지<input id="e-item" placeholder="TDI"></label>
     <label id="w-to">하차지<input id="e-to" placeholder="광진화학당진"></label>
@@ -582,6 +607,43 @@ $('#bkFile').onchange=e=>{
     e.target.value='';
   };
   r.readAsText(f);
+};
+
+// 차량 목록 · 여러 대 고르기
+const toks=s=>s.trim().split(/[\s,]+/).filter(Boolean);
+const curCars=()=>toks($('#e-cars').value);
+function renderPicker(){
+  const f=[...new Set(db.fleet||[])].sort(), sel=new Set(curCars());
+  const used=new Set(db.items.filter(i=>i.day===cur&&i.id!==editId).flatMap(i=>i.cars));
+  $('#pickCount').textContent=sel.size?`· ${sel.size}대 선택`:'';
+  $('#picker').innerHTML=f.length
+    ?f.map(c=>`<button type="button" class="pick ${sel.has(c)?'on':''} ${used.has(c)?'used':''}" data-car="${esc(c)}" aria-pressed="${sel.has(c)}">${esc(c)}</button>`).join('')
+    :'<div class="empty" style="grid-column:1/-1">차량 목록이 비어 있어요. ‘차량 목록 고치기’에 회사 차 번호를 한 번 넣어 두면 여기서 눌러서 고를 수 있어요.</div>';
+}
+$('#picker').onclick=e=>{
+  const b=e.target.closest('[data-car]'); if(!b)return;
+  const c=b.dataset.car; let a=curCars();
+  a=a.includes(c)?a.filter(x=>x!==c):[...a,c];
+  $('#e-cars').value=a.join(' '); renderPicker();
+};
+$('#e-cars').addEventListener('input',renderPicker);
+const _openEdit=openEdit;
+openEdit=function(a,b){_openEdit(a,b);renderPicker()};
+$('#fEdit').addEventListener('submit',()=>{
+  const add=toks($('#e-cars').value);
+  db.fleet=[...new Set([...(db.fleet||[]),...add])]; save();
+});
+function fleetCount(){$('#fleetN').textContent=`${new Set(toks($('#fleetTxt').value)).size}대`}
+function openFleet(){$('#fleetTxt').value=[...new Set(db.fleet||[])].sort().join(' ');fleetCount();show('#sFleet')}
+$('#fleetTxt').addEventListener('input',fleetCount);
+$('#fleetBtn').onclick=openFleet;
+$('#pickFleet').onclick=openFleet;
+$('#fFleet').onsubmit=e=>{
+  e.preventDefault();
+  db.fleet=[...new Set(toks($('#fleetTxt').value))]; save();
+  $('#sFleet').hidden=true;
+  if(!$('#sEdit').hidden)renderPicker();
+  $('#hint').textContent=`차량 목록에 ${db.fleet.length}대를 저장했습니다.`;
 };
 
 render();
