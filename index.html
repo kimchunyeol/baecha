@@ -89,6 +89,7 @@ textarea.mono{font-family:var(--f-mono);font-size:14px;line-height:1.5}
 .cal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .cal-head strong{font-family:var(--f-mono);font-size:16px}
 .cal-head small{color:var(--muted);font-size:12px}
+.fold{width:100%;margin-top:8px;padding:6px;font-size:13px;color:var(--muted);background:none;border-style:dashed}
 .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
 .cal-wd{text-align:center;font-size:12px;color:var(--muted);font-weight:700;padding:2px 0}
 .cal-day{border:1px solid transparent;background:var(--bg);border-radius:6px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:50px;font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums}
@@ -117,7 +118,7 @@ body{margin:0}
       <button id="prev" aria-label="전날">◀</button>
       <input type="date" id="day">
       <button id="next" aria-label="다음날">▶</button>
-      <button id="calToggle" aria-expanded="true">달력</button>
+      <button id="calToggle" aria-expanded="true">달력 접기 ▲</button>
       <span class="holname" id="holName"></span>
       <button id="holBtn" title="임시공휴일·선거일처럼 새로 정해진 휴일을 직접 표시">이 날 휴일로</button>
     </div>
@@ -135,6 +136,7 @@ body{margin:0}
       <div style="text-align:center"><strong id="mTitle"></strong><br><small>노란 숫자는 배차된 차 대수</small></div>
       <button id="mNext" aria-label="다음달">▶</button>
     </div>
+    <button id="calFold" class="fold">달력 접기 ▲</button>
     <div class="cal-grid" id="calGrid"></div>
   </div>
 
@@ -395,7 +397,7 @@ const shiftMonth=n=>{const [y,m]=calMonth.split('-').map(Number);const d=new Dat
 $('#mPrev').onclick=()=>shiftMonth(-1);
 $('#mNext').onclick=()=>shiftMonth(1);
 $('#calGrid').onclick=e=>{const b=e.target.closest('[data-day]');if(b){cur=b.dataset.day;calMonth=cur.slice(0,7);_render();renderCal()}};
-function setCal(open){$('#cal').hidden=!open;$('#calToggle').setAttribute('aria-expanded',open);try{localStorage.setItem('baecha-cal',open?'1':'0')}catch(e){}}
+function setCal(open){$('#cal').hidden=!open;$('#calToggle').setAttribute('aria-expanded',open);$('#calToggle').textContent=open?'달력 접기 ▲':'달력 펴기 ▼';try{localStorage.setItem('baecha-cal',open?'1':'0')}catch(e){}}
 $('#clearDay').onclick=()=>{
   const b=$('#clearDay'), n=db.items.filter(i=>i.day===cur).length;
   if(!n)return;
@@ -414,6 +416,7 @@ $('#holBtn').onclick=()=>{
   save(); renderCal();
 };
 $('#calToggle').onclick=()=>setCal($('#cal').hidden);
+$('#calFold').onclick=()=>setCal(false);
 try{if(localStorage.getItem('baecha-cal')==='0')setCal(false)}catch(e){}
 
 // 날짜
