@@ -230,9 +230,9 @@ body{margin:0}
       <div class="picker" id="picker"></div>
       <small class="pnote">흐린 번호는 이 날 이미 배차된 차예요.</small>
     </div>
-    <label class="full" id="w-place">하차지·시간<input id="e-place" placeholder="천보 14시"></label>
+    <label class="full" id="w-place">하차지·시간<input id="e-place" list="destList" autocomplete="off" placeholder="천보 14시"><datalist id="destList"></datalist></label>
     <label id="w-item" class="full">상차지<input id="e-item" placeholder="직접 쓰거나 아래에서 고르기"><span class="opts" id="itemOpts"></span></label>
-    <label id="w-to" class="full">하차지<input id="e-to" placeholder="비워 두면 상차만"></label>
+    <label id="w-to" class="full">하차지<input id="e-to" list="destList" autocomplete="off" placeholder="비워 두면 상차만"></label>
     <div class="btns">
       <button type="button" id="eDel" class="left">삭제</button>
       <button type="button" data-close>취소</button>
@@ -674,6 +674,16 @@ $('#e-to').addEventListener('input',()=>{
   if($('#e-kind').value==='unload')return;
   $('#e-kind').value=$('#e-to').value.trim()?'same':'load';
 });
+
+// 하차지 자동완성: 예전에 쓴 하차지를 많이 쓴 순서로
+function renderDest(){
+  const n={};
+  const bump=v=>{v=(v||'').trim();if(v)n[v]=(n[v]||0)+1};
+  db.items.forEach(i=>{bump(i.to);bump(i.place);bump((i.place||'').replace(/\s*\d{1,2}\s*시.*$/,''))});
+  $('#destList').innerHTML=Object.keys(n).sort((a,b)=>n[b]-n[a]).map(v=>`<option value="${esc(v)}"></option>`).join('');
+}
+const _openEdit3=openEdit;
+openEdit=function(a,b){renderDest();_openEdit3(a,b)};
 
 render();
 </script>
