@@ -137,7 +137,6 @@ body{margin:0}
     <div class="tools">
       <button id="openPaste" hidden>카톡 글 붙여넣기</button>
       <button id="openCopy">글 미리보기</button>
-      <button id="share" hidden>카톡으로 보내기</button>
       <button id="quickCopy" class="primary">카톡용 복사</button>
     </div>
   </header>
@@ -533,10 +532,6 @@ $('#fPaste').onsubmit=e=>{
 };
 
 // 카톡용 복사
-if(navigator.share&&matchMedia('(pointer:coarse)').matches){
-  $('#share').hidden=false;
-  $('#share').onclick=()=>{navigator.share({text:toText()}).catch(()=>{})};
-}
 $('#quickCopy').onclick=()=>{
   const b=$('#quickCopy'), txt=toText();
   const done=()=>{b.textContent='복사됨 ✓ 카톡에 Ctrl+V';setTimeout(()=>b.textContent='카톡용 복사',2500)};
