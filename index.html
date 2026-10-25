@@ -422,7 +422,7 @@ render=function(){if(cur.slice(0,7)!==calMonth)calMonth=cur.slice(0,7);_render()
 const shiftMonth=n=>{const [y,m]=calMonth.split('-').map(Number);const d=new Date(y,m-1+n,1);calMonth=d.getFullYear()+'-'+z(d.getMonth()+1);renderCal()};
 $('#mPrev').onclick=()=>shiftMonth(-1);
 $('#mNext').onclick=()=>shiftMonth(1);
-$('#calGrid').onclick=e=>{const b=e.target.closest('[data-day]');if(b){cur=b.dataset.day;calMonth=cur.slice(0,7);_render();renderCal()}};
+$('#calGrid').onclick=e=>{const b=e.target.closest('[data-day]');if(b){cur=b.dataset.day;calMonth=cur.slice(0,7);_render();renderCal();setCal(false)}};
 function setCal(open){$('#cal').hidden=!open;$('#calToggle').setAttribute('aria-expanded',open);$('#calToggle').textContent=open?'달력 접기 ▲':'달력 펴기 ▼';try{localStorage.setItem('baecha-cal',open?'1':'0')}catch(e){}}
 $('#clearDay').onclick=()=>{
   const b=$('#clearDay'), n=db.items.filter(i=>i.day===cur).length;
@@ -443,7 +443,7 @@ $('#holBtn').onclick=()=>{
 };
 $('#calToggle').onclick=()=>setCal($('#cal').hidden);
 $('#calFold').onclick=()=>setCal(false);
-try{if(localStorage.getItem('baecha-cal')==='0')setCal(false)}catch(e){}
+setCal(false); // 열 때는 항상 접힌 상태
 
 // 날짜
 $('#day').onchange=e=>{cur=e.target.value||today;render()};
