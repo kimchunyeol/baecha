@@ -99,6 +99,9 @@ textarea.mono{font-family:var(--f-mono);font-size:14px;line-height:1.5}
 .pick.used{opacity:.4}
 .pick.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);opacity:1}
 .pnote{color:var(--muted);font-size:11px}
+.opts{display:flex;flex-wrap:wrap;gap:4px}
+.opt{padding:6px 9px;font-size:13px;font-weight:400}
+.opt.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
 .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
 .cal-wd{text-align:center;font-size:12px;color:var(--muted);font-weight:700;padding:2px 0}
 .cal-day{border:1px solid transparent;background:var(--bg);border-radius:6px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:50px;font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums}
@@ -228,7 +231,7 @@ body{margin:0}
       <small class="pnote">흐린 번호는 이 날 이미 배차된 차예요.</small>
     </div>
     <label class="full" id="w-place">하차지·시간<input id="e-place" placeholder="천보 14시"></label>
-    <label id="w-item">상차지<input id="e-item" placeholder="TDI"></label>
+    <label id="w-item" class="full">상차지<input id="e-item" placeholder="직접 쓰거나 아래에서 고르기"><span class="opts" id="itemOpts"></span></label>
     <label id="w-to">하차지<input id="e-to" placeholder="광진화학당진"></label>
     <div class="btns">
       <button type="button" id="eDel" class="left">삭제</button>
@@ -649,6 +652,22 @@ $('#fFleet').onsubmit=e=>{
   if(!$('#sEdit').hidden)renderPicker();
   $('#hint').textContent=`차량 목록에 ${db.fleet.length}대를 저장했습니다.`;
 };
+
+// 상차지 고르기
+const LOADS=['본공장','TDI','금호','대아','백광'];
+function renderLoads(){
+  const v=$('#e-item').value.trim();
+  $('#itemOpts').innerHTML=LOADS.map(x=>`<button type="button" class="opt ${v===x?'on':''}" data-load="${x}" aria-pressed="${v===x}">${x}</button>`).join('');
+}
+$('#itemOpts').onclick=e=>{
+  const b=e.target.closest('[data-load]'); if(!b)return;
+  e.preventDefault();
+  $('#e-item').value=$('#e-item').value.trim()===b.dataset.load?'':b.dataset.load;
+  renderLoads();
+};
+$('#e-item').addEventListener('input',renderLoads);
+const _openEdit2=openEdit;
+openEdit=function(a,b){_openEdit2(a,b);renderLoads()};
 
 render();
 </script>
