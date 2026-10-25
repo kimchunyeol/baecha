@@ -305,7 +305,7 @@ const cars=c=>`<span class="cars">${c.map(x=>`<span class="car">${esc(x)}</span>
 
 function lineHTML(it){
   let body;
-  if(it.kind==='unload') body=`<span class="place">${esc(it.place)||'하차지 미정'}</span>${cars(it.cars)}${it.item?`<span class="item">${esc(it.item)}</span>`:''}`;
+  if(it.kind==='unload') body=`<span class="place">${esc(it.place)||'하차지 미정'}</span>${cars(it.cars)}`;
   else body=`${cars(it.cars)}<span class="item">${esc(it.item)}</span>${it.kind==='same'?`<span class="to">→ ${esc(it.to)}</span>`:''}`;
   return `<div class="line ${it.done?'done':''}" data-id="${it.id}" role="checkbox" aria-checked="${it.done}" tabindex="0">
     <span class="chk">✓</span><span class="body">${body}</span><span class="acts"><button class="edit" data-edit="${it.id}">수정</button><button class="del" data-del="${it.id}">삭제</button></span></div>`;
@@ -488,6 +488,7 @@ function syncFields(){
   const k=$('#e-kind').value;
   $('#w-place').hidden=k!=='unload';
   $('#w-to').hidden=k==='unload';
+  $('#w-item').hidden=k==='unload';
 }
 $('#e-kind').onchange=syncFields;
 let delArmed=false;
