@@ -120,7 +120,7 @@ body{margin:0}
       <button id="next" aria-label="다음날">▶</button>
       <button id="calToggle" aria-expanded="true">달력 접기 ▲</button>
       <span class="holname" id="holName"></span>
-      <button id="holBtn" title="임시공휴일·선거일처럼 새로 정해진 휴일을 직접 표시">이 날 휴일로</button>
+      <button id="holBtn" hidden title="임시공휴일·선거일처럼 새로 정해진 휴일을 직접 표시">이 날 휴일로</button>
     </div>
     <div class="tools">
       <button id="openPaste" hidden>카톡 글 붙여넣기</button>
@@ -371,7 +371,7 @@ function renderCal(){
   $('#calGrid').innerHTML=h;
   const hn=hol(cur), auto=holidays(+cur.slice(0,4))[cur];
   $('#holName').textContent=hn;
-  $('#holBtn').hidden=!!auto;
+  $('#holBtn').hidden=true;
   $('#holBtn').textContent=(db.hol&&db.hol[cur])?'휴일 해제':'이 날 휴일로';
 }
 function toText(day=cur){
