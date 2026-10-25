@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="배차판">
+<meta name="mobile-web-app-capable" content="yes">
+<title>배차판</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* 레이아웃: 세 칸 배차판 (유니드 하차 / 유니드 당일·상차만 / 광진), 좁은 화면에선 탭으로 전환 */
+:root{
+  --bg:#eef0f2; --panel:#ffffff; --ink:#1d232a; --muted:#66707b; --line:#d5d9de; --chip:#eef1f4;
+  --accent:#f2b705; --accent-ink:#2a2100;
+  --c1:#3a6ea5; --c2:#2f8a5b; --c3:#b4462f;
+  --f-display:"Black Han Sans","IBM Plex Sans KR",sans-serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#14181c; --panel:#1d2329; --ink:#e8ebee; --muted:#9aa4ae; --line:#2f373f; --chip:#262e36;
+  --c1:#6fa3dc; --c2:#5cc28c; --c3:#e47a60; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14181c; --panel:#1d2329; --ink:#e8ebee; --muted:#9aa4ae; --line:#2f373f; --chip:#262e36;
+  --c1:#6fa3dc; --c2:#5cc28c; --c3:#e47a60; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 40px}
+.wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;justify-content:space-between}
+h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-spacing:.5px}
+.date{display:flex;align-items:center;gap:6px}
+.date input{font-family:var(--f-mono);font-size:15px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+button{font-family:var(--f-body);font-size:14px;cursor:pointer;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 12px}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.tabs{display:none;gap:6px}
+.tabs button{flex:1;font-weight:700}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+.col{background:var(--panel);border:1px solid var(--line);border-radius:10px;min-width:0;display:flex;flex-direction:column}
+.col-head{padding:12px 14px;border-bottom:3px solid var(--k);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.col-head h2{margin:0;font-size:17px;font-weight:700}
+.col-head small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.count{font-family:var(--f-mono);font-size:13px;color:var(--muted);white-space:nowrap}
+.sub{padding:10px 14px 0;font-size:12px;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.list{display:flex;flex-direction:column;padding:4px 6px}
+.empty{color:var(--muted);font-size:13px;padding:8px}
+.line{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:6px;cursor:pointer}
+.line:hover{background:var(--chip)}
+.line .chk{width:20px;height:20px;border:2px solid var(--line);border-radius:5px;flex:none;display:grid;place-items:center;font-size:13px;color:var(--panel)}
+.line.done .chk{background:var(--k);border-color:var(--k)}
+.line .body{min-width:0;flex:1;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.line.done .body{opacity:.45}
+.place{font-weight:700;overflow-wrap:anywhere}
+.cars{display:flex;gap:4px;flex-wrap:wrap}
+.car{font-family:var(--f-mono);font-weight:600;font-size:14px;background:var(--chip);border-radius:4px;padding:1px 6px}
+.item{font-size:13px;color:var(--muted)}
+.to{font-size:14px;color:var(--k);font-weight:700}
+.acts{display:flex;gap:4px;flex:none}
+.edit,.del{padding:4px 8px;font-size:13px;border-radius:5px}
+.del{color:var(--c3)}
+.del.armed{background:var(--c3);border-color:var(--c3);color:var(--panel);font-weight:700}
+.foot .right{display:flex;gap:8px;flex-wrap:wrap}
+#clearDay.armed{background:var(--c3);border-color:var(--c3);color:var(--panel);font-weight:700}
+.add{margin:6px 12px 12px;border-style:dashed;color:var(--muted)}
+.foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;color:var(--muted);font-size:13px}
+.sheet{position:fixed;inset:0;background:rgb(0 0 0 / .45);display:flex;align-items:flex-end;justify-content:center;z-index:20;padding-top:env(safe-area-inset-top,0px)}
+.sheet .box{background:var(--panel);width:100%;max-width:560px;border-radius:12px 12px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:grid;grid-template-columns:1fr 1fr;gap:10px;max-height:90%;overflow:auto}
+@media (min-width:700px){.sheet{align-items:center}.sheet .box{border-radius:12px}}
+.sheet h3{grid-column:1/-1;margin:0;font-size:18px}
+.sheet p{grid-column:1/-1;margin:0;color:var(--muted);font-size:13px}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:700}
+.full{grid-column:1/-1}
+input,select,textarea{font-family:var(--f-body);font-size:16px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);width:100%}
+textarea.mono{font-family:var(--f-mono);font-size:14px;line-height:1.5}
+.btns{grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.btns .left{margin-right:auto}
+.cal{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;max-width:620px;width:100%}
+.cal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.cal-head strong{font-family:var(--f-mono);font-size:16px}
+.cal-head small{color:var(--muted);font-size:12px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal-wd{text-align:center;font-size:12px;color:var(--muted);font-weight:700;padding:2px 0}
+.cal-day{border:1px solid transparent;background:var(--bg);border-radius:6px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:50px;font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums}
+.cal-day.out{opacity:.35}
+.cal-day.today{border-color:var(--muted)}
+.cal-day.sel{background:var(--ink);color:var(--bg)}
+.cal-day .sun{color:var(--c3)}.cal-day .sat{color:var(--c1)}
+.cal-day.sel .d{color:inherit}
+.cal-day.hol .d{color:var(--c3)}
+.cal-day .h{font-family:var(--f-body);font-size:10px;line-height:1.1;color:var(--c3);text-align:center;overflow-wrap:anywhere}
+.cal-day.sel .h{color:inherit}
+.holname{color:var(--c3);font-weight:700;font-size:14px}
+.cal-day .n{font-family:var(--f-body);font-size:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:0 6px;white-space:nowrap}
+@media (max-width:760px){.tabs{display:flex}.board{grid-template-columns:1fr}.col:not(.on){display:none}}
+
+body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>배차판</h1>
+    <div class="date">
+      <button id="prev" aria-label="전날">◀</button>
+      <input type="date" id="day">
+      <button id="next" aria-label="다음날">▶</button>
+      <button id="calToggle" aria-expanded="true">달력</button>
+      <span class="holname" id="holName"></span>
+      <button id="holBtn" title="임시공휴일·선거일처럼 새로 정해진 휴일을 직접 표시">이 날 휴일로</button>
+    </div>
+    <div class="tools">
+      <button id="openPaste">카톡 글 붙여넣기</button>
+      <button id="openCopy">글 미리보기</button>
+      <button id="share" hidden>카톡으로 보내기</button>
+      <button id="quickCopy" class="primary">카톡용 복사</button>
+    </div>
+  </header>
+
+  <div class="cal" id="cal">
+    <div class="cal-head">
+      <button id="mPrev" aria-label="지난달">◀</button>
+      <div style="text-align:center"><strong id="mTitle"></strong><br><small>노란 숫자는 배차된 차 대수</small></div>
+      <button id="mNext" aria-label="다음달">▶</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button data-tab="c1" aria-selected="true">유니드 익착</button>
+    <button data-tab="c2" aria-selected="false">유니드 당착</button>
+    <button data-tab="c3" aria-selected="false">광진</button>
+  </div>
+
+  <div class="board">
+    <section class="col on" id="c1" style="--k:var(--c1)">
+      <div class="col-head"><div><h2>익착</h2><small>유니드 · 어제 상차 → 오늘 하차</small></div><span class="count" id="n-c1"></span></div>
+      <div class="list" id="l1"></div>
+      <button class="add" data-add="unid:unload">+ 익착 추가</button>
+    </section>
+
+    <section class="col" id="c2" style="--k:var(--c2)">
+      <div class="col-head"><div><h2>당착 · 상차만</h2><small>유니드 · 오늘 싣고 오늘 내림</small></div><span class="count" id="n-c2"></span></div>
+      <div class="sub">당착</div>
+      <div class="list" id="l2a"></div>
+      <div class="sub">상차만</div>
+      <div class="list" id="l2b"></div>
+      <button class="add" data-add="unid:load">+ 상차 추가</button>
+    </section>
+
+    <section class="col" id="c3" style="--k:var(--c3)">
+      <div class="col-head"><div><h2>광진화학</h2><small>광진 전용</small></div><span class="count" id="n-c3"></span></div>
+      <div class="sub">익착</div>
+      <div class="list" id="l3a"></div>
+      <div class="sub">당착</div>
+      <div class="list" id="l3b"></div>
+      <div class="sub">상차만</div>
+      <div class="list" id="l3c"></div>
+      <button class="add" data-add="kj:same">+ 광진 추가</button>
+    </section>
+  </div>
+
+  <div class="foot">
+    <span id="hint">줄을 누르면 완료 표시. ‘상차만’ 차는 내일로 넘기면 내일 익착 칸에 들어갑니다.</span>
+    <span class="right">
+      <button id="clearDay">이 날 배차 전부 지우기</button>
+      <button id="carry">상차만 → 내일로 넘기기</button>
+    </span>
+  </div>
+</div>
+
+<!-- 수정/추가 -->
+<div class="sheet" id="sEdit" hidden>
+  <form class="box" id="fEdit">
+    <h3 id="eTitle">추가</h3>
+    <label>화주<select id="e-group"><option value="unid">유니드</option><option value="kj">광진</option></select></label>
+    <label>종류<select id="e-kind"><option value="unload">익착 (어제 상차 → 오늘 하차)</option><option value="same">당착 (오늘 상차 → 오늘 하차)</option><option value="load">상차만</option></select></label>
+    <label class="full">차번 (띄어쓰기로 여러 대)<input id="e-cars" placeholder="1234 5678" inputmode="numeric" required></label>
+    <label class="full" id="w-place">하차지·시간<input id="e-place" placeholder="천보 14시"></label>
+    <label id="w-item">품목<input id="e-item" placeholder="TDI"></label>
+    <label id="w-to">하차지<input id="e-to" placeholder="광진화학당진"></label>
+    <div class="btns">
+      <button type="button" id="eDel" class="left">삭제</button>
+      <button type="button" data-close>취소</button>
+      <button type="submit" class="primary">저장</button>
+    </div>
+  </form>
+</div>
+
+<!-- 붙여넣기 -->
+<div class="sheet" id="sPaste" hidden>
+  <form class="box" id="fPaste">
+    <h3>카톡 글 붙여넣기</h3>
+    <p>단톡방에 올리는 배차 글을 그대로 붙여넣으면 칸에 나눠 넣습니다. 날짜가 여러 개 있으면 날짜별로 들어가고, 그 날짜에 있던 배차는 바뀝니다.</p>
+    <textarea id="pasteTxt" class="mono full" rows="12" placeholder="10/25(일요일)&#10;<유니드>&#10;천보 14시 / 1234&#10;5678 TDI / 상차만"></textarea>
+    <div class="btns"><button type="button" data-close>취소</button><button type="submit" class="primary">칸에 넣기</button></div>
+  </form>
+</div>
+
+<!-- 복사 -->
+<div class="sheet" id="sCopy" hidden>
+  <div class="box">
+    <h3>카톡용 글</h3>
+    <p>복사해서 단톡방에 붙여넣으세요. 휴일처럼 여러 날을 한 번에 보낼 때는 며칠치를 고르세요.</p>
+    <label class="full">며칠치<select id="copyDays"><option value="1">이 날만</option><option value="2">2일치</option><option value="3">3일치</option><option value="4">4일치</option><option value="5">5일치</option><option value="7">7일치</option></select></label>
+    <textarea id="copyTxt" class="mono full" rows="14" readonly></textarea>
+    <div class="btns"><button type="button" data-close>닫기</button><button type="button" id="copyBtn" class="primary">복사</button></div>
+  </div>
+</div>
+
+<script>
+const KEY='baecha-v2';
+const $=s=>document.querySelector(s);
+const z=n=>String(n).padStart(2,'0');
+const fmt=d=>d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());
+const addDays=(s,n)=>{const d=new Date(s+'T00:00');d.setDate(d.getDate()+n);return fmt(d)};
+const WD=['일','월','화','수','목','금','토'];
+const today=fmt(new Date());
+let cur=today, editId=null;
+
+
+// 카톡 글 → 배차 목록
+function parse(text,fallbackDay){
+  let day=fallbackDay, group='unid'; const out=[];
+  for(let raw of text.split('\n')){
+    const s=raw.trim(); if(!s) continue;
+    const dm=s.match(/^(\d{1,2})\s*\/\s*(\d{1,2})\s*\(/);
+    if(dm){const y=+fallbackDay.slice(0,4);day=`${y}-${z(dm[1])}-${z(dm[2])}`;continue}
+    if(/^<\s*유니드/.test(s)){group='unid';continue}
+    if(/^<\s*광진/.test(s)){group='kj';continue}
+    const i=s.lastIndexOf('/'); if(i<0) continue;
+    const a=s.slice(0,i).trim(), b=s.slice(i+1).trim();
+    const cm=a.match(/^((?:\d{4}\s*)+)(.*)$/);
+    if(cm){ // "5678 TDI / 상차만" 또는 "2503 TDI / 광진화학당진"
+      const cars=cm[1].trim().split(/\s+/), item=cm[2].trim();
+      if(b==='상차만') out.push({day,group,kind:'load',cars,item,to:'',place:''});
+      else out.push({day,group,kind:'same',cars,item,to:b,place:''});
+    } else { // "천보 14시 / 1234"
+      out.push({day,group,kind:'unload',cars:b.split(/\s+/).filter(Boolean),place:a,item:'',to:''});
+    }
+  }
+  return {day,items:out};
+}
+
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.items)return v}catch(e){}return null}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){}}
+let db=load();
+if(!db){db={items:[],next:1}}
+
+const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cars=c=>`<span class="cars">${c.map(x=>`<span class="car">${esc(x)}</span>`).join('')}</span>`;
+
+function lineHTML(it){
+  let body;
+  if(it.kind==='unload') body=`<span class="place">${esc(it.place)||'하차지 미정'}</span>${cars(it.cars)}${it.item?`<span class="item">${esc(it.item)}</span>`:''}`;
+  else body=`${cars(it.cars)}<span class="item">${esc(it.item)}</span>${it.kind==='same'?`<span class="to">→ ${esc(it.to)}</span>`:''}`;
+  return `<div class="line ${it.done?'done':''}" data-id="${it.id}" role="checkbox" aria-checked="${it.done}" tabindex="0">
+    <span class="chk">✓</span><span class="body">${body}</span><span class="acts"><button class="edit" data-edit="${it.id}">수정</button><button class="del" data-del="${it.id}">삭제</button></span></div>`;
+}
+function fill(sel,list,msg,hideEmpty){
+  const el=$(sel); const sub=el.previousElementSibling;
+  if(hideEmpty&&sub&&sub.classList.contains('sub')){sub.hidden=!list.length;el.hidden=!list.length}
+  el.innerHTML=list.length?list.map(lineHTML).join(''):`<div class="empty">${msg}</div>`;
+}
+const nCars=a=>a.reduce((s,i)=>s+i.cars.length,0);
+const nDone=a=>a.filter(i=>i.done).reduce((s,i)=>s+i.cars.length,0);
+
+function render(){
+  $('#day').value=cur;
+  const d=db.items.filter(i=>i.day===cur);
+  const g=(gr,k)=>d.filter(i=>i.group===gr&&i.kind===k);
+  fill('#l1',g('unid','unload'),'어제 실어 둔 차가 없습니다.');
+  fill('#l2a',g('unid','same'),'없음');
+  fill('#l2b',g('unid','load'),'없음');
+  fill('#l3a',g('kj','unload'),'',true);
+  fill('#l3b',g('kj','same'),'',true);
+  fill('#l3c',g('kj','load'),'',true);
+  const kj=d.filter(i=>i.group==='kj');
+  if(!kj.length){$('#l3a').hidden=false;$('#l3a').innerHTML='<div class="empty">광진 배차가 없습니다.</div>'}
+  const c=a=>`${nDone(a)}/${nCars(a)}대`;
+  $('#n-c1').textContent=c(g('unid','unload'));
+  $('#n-c2').textContent=c([...g('unid','same'),...g('unid','load')]);
+  $('#n-c3').textContent=c(kj);
+  const loads=d.filter(i=>i.kind==='load'&&!i.carried);
+  $('#carry').disabled=!loads.length;
+  $('#carry').textContent=loads.length?`상차만 ${nCars(loads)}대 → 내일로 넘기기`:'넘길 상차만 차 없음';
+}
+
+// 배차 → 카톡 글
+// 한국 공휴일 자동 계산: 양력 공휴일 + 음력(설·추석·부처님오신날) + 대체공휴일 규칙
+const SPECIAL={'2026-06-03':'지방선거'}; // 선거일처럼 미리 계산 못 하는 날
+const _hc={};
+function holidays(y){
+  if(_hc[y])return _hc[y];
+  const H={}, add=(s,n)=>{if(!H[s])H[s]=n};
+  const sh=(s,n)=>{const d=new Date(s+'T00:00');d.setDate(d.getDate()+n);return fmt(d)};
+  const lunar={};
+  try{
+    const f=new Intl.DateTimeFormat('en-u-ca-dangi',{month:'numeric',day:'numeric'});
+    for(let d=new Date(y,0,1);d.getFullYear()===y;d.setDate(d.getDate()+1)){
+      const p=f.formatToParts(d), mo=p.find(x=>x.type==='month').value, da=p.find(x=>x.type==='day').value;
+      if(/^\d+$/.test(mo)){const k=z(mo)+'-'+z(da);if(!lunar[k])lunar[k]=fmt(d)}
+    }
+  }catch(e){}
+  const groups=[];
+  const fixed=[['01-01','신정',0],['03-01','삼일절',1],['05-01','노동절',1],['05-05','어린이날',1],['06-06','현충일',0],['08-15','광복절',1],['10-03','개천절',1],['10-09','한글날',1],['12-25','성탄절',1]];
+  if(y>=2026)fixed.push(['07-17','제헌절',1]);
+  fixed.forEach(([md,n,sub])=>{add(y+'-'+md,n);if(sub)groups.push({days:[y+'-'+md],big:false})});
+  const seol=lunar['01-01'];
+  if(seol){const ds=[sh(seol,-1),seol,sh(seol,1)];ds.forEach(s=>add(s,'설날'));groups.push({days:ds,big:true})}
+  const bud=lunar['04-08'];
+  if(bud){add(bud,'부처님오신날');groups.push({days:[bud],big:false})}
+  const chu=lunar['08-15'];
+  if(chu){const ds=[sh(chu,-1),chu,sh(chu,1)];ds.forEach(s=>add(s,'추석'));groups.push({days:ds,big:true})}
+  Object.entries(SPECIAL).forEach(([s,n])=>{if(s.startsWith(y+'-'))add(s,n)});
+  const dow=s=>new Date(s+'T00:00').getDay(), cnt={};
+  groups.forEach(g=>g.days.forEach(s=>cnt[s]=(cnt[s]||0)+1));
+  groups.sort((a,b)=>a.days[0]<b.days[0]?-1:1).forEach(g=>{
+    const need=g.days.some(s=>dow(s)===0||(!g.big&&dow(s)===6)||cnt[s]>1);
+    if(!need)return;
+    let s=g.days[g.days.length-1];
+    do{s=sh(s,1)}while(H[s]||dow(s)===0||dow(s)===6);
+    H[s]='대체공휴일';
+  });
+  return _hc[y]=H;
+}
+const hol=s=>(db.hol&&db.hol[s])||holidays(+s.slice(0,4))[s]||'';
+function rangeText(n){
+  const out=[];
+  for(let k=0;k<n;k++){const dd=addDays(cur,k);if(db.items.some(i=>i.day===dd))out.push(toText(dd))}
+  return out.length?out.join('\n\n'):toText(cur);
+}
+function renderCal(){
+  const [y,m]=calMonth.split('-').map(Number);
+  $('#mTitle').textContent=`${y}년 ${m}월`;
+  const first=new Date(y,m-1,1), start=new Date(first); start.setDate(1-first.getDay());
+  const cnt={}; db.items.forEach(i=>{cnt[i.day]=(cnt[i.day]||0)+i.cars.length});
+  let h=WD.map((w,i)=>`<div class="cal-wd ${i===0?'sun':i===6?'sat':''}">${w}</div>`).join('');
+  for(let k=0;k<42;k++){
+    const d=new Date(start); d.setDate(start.getDate()+k); const s=fmt(d), wd=d.getDay();
+    if(k===35&&d.getMonth()!==m-1)break;
+    const hn=hol(s);
+    h+=`<button class="cal-day ${d.getMonth()!==m-1?'out':''} ${s===today?'today':''} ${s===cur?'sel':''} ${hn?'hol':''}" data-day="${s}" aria-label="${d.getMonth()+1}월 ${d.getDate()}일 ${hn}${cnt[s]?' '+cnt[s]+'대':''}"><span class="d ${wd===0?'sun':wd===6?'sat':''}">${d.getDate()}</span>${hn?`<span class="h">${hn}</span>`:''}${cnt[s]?`<span class="n">${cnt[s]}대</span>`:''}</button>`;
+  }
+  $('#calGrid').innerHTML=h;
+  const hn=hol(cur), auto=holidays(+cur.slice(0,4))[cur];
+  $('#holName').textContent=hn;
+  $('#holBtn').hidden=!!auto;
+  $('#holBtn').textContent=(db.hol&&db.hol[cur])?'휴일 해제':'이 날 휴일로';
+}
+function toText(day=cur){
+  const d=db.items.filter(i=>i.day===day), dt=new Date(day+'T00:00');
+  const L=[`${dt.getMonth()+1}/${dt.getDate()}(${WD[dt.getDay()]}요일)`];
+  for(const [gr,name] of [['unid','유니드'],['kj','광진']]){
+    const a=d.filter(i=>i.group===gr); if(!a.length) continue;
+    if(L.length>1) L.push('');
+    L.push(`<${name}>`);
+    const un=a.filter(i=>i.kind==='unload'), up=a.filter(i=>i.kind!=='unload');
+    un.forEach(i=>L.push(`${i.place||'하차지 미정'} / ${i.cars.join(' ')}`));
+    if(un.length&&up.length) L.push('');
+    up.forEach(i=>L.push(`${i.cars.join(' ')} ${i.item} / ${i.kind==='load'?'상차만':i.to}`.replace(/\s+\//,' /')));
+  }
+  return L.join('\n');
+}
+
+// 달력
+let calMonth=cur.slice(0,7);
+const _render=render;
+render=function(){if(cur.slice(0,7)!==calMonth)calMonth=cur.slice(0,7);_render();renderCal()};
+const shiftMonth=n=>{const [y,m]=calMonth.split('-').map(Number);const d=new Date(y,m-1+n,1);calMonth=d.getFullYear()+'-'+z(d.getMonth()+1);renderCal()};
+$('#mPrev').onclick=()=>shiftMonth(-1);
+$('#mNext').onclick=()=>shiftMonth(1);
+$('#calGrid').onclick=e=>{const b=e.target.closest('[data-day]');if(b){cur=b.dataset.day;calMonth=cur.slice(0,7);_render();renderCal()}};
+function setCal(open){$('#cal').hidden=!open;$('#calToggle').setAttribute('aria-expanded',open);try{localStorage.setItem('baecha-cal',open?'1':'0')}catch(e){}}
+$('#clearDay').onclick=()=>{
+  const b=$('#clearDay'), n=db.items.filter(i=>i.day===cur).length;
+  if(!n)return;
+  if(!b.classList.contains('armed')){
+    b.classList.add('armed');b.textContent=`${n}줄 전부 지울까요? 한 번 더 누르세요`;
+    setTimeout(()=>{b.classList.remove('armed');b.textContent='이 날 배차 전부 지우기'},4000);
+    return;
+  }
+  db.items=db.items.filter(i=>i.day!==cur);
+  b.classList.remove('armed');b.textContent='이 날 배차 전부 지우기';
+  save();render();$('#hint').textContent='이 날 배차를 모두 지웠습니다.';
+};
+$('#holBtn').onclick=()=>{
+  db.hol=db.hol||{};
+  if(db.hol[cur])delete db.hol[cur]; else db.hol[cur]='임시공휴일';
+  save(); renderCal();
+};
+$('#calToggle').onclick=()=>setCal($('#cal').hidden);
+try{if(localStorage.getItem('baecha-cal')==='0')setCal(false)}catch(e){}
+
+// 날짜
+$('#day').onchange=e=>{cur=e.target.value||today;render()};
+$('#prev').onclick=()=>{cur=addDays(cur,-1);render()};
+$('#next').onclick=()=>{cur=addDays(cur,1);render()};
+
+// 탭(휴대폰)
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  document.querySelectorAll('.col').forEach(c=>c.classList.toggle('on',c.id===b.dataset.tab));
+});
+
+// 창 열고 닫기
+const show=id=>$(id).hidden=false;
+document.querySelectorAll('.sheet').forEach(s=>{
+  s.addEventListener('click',e=>{if(e.target===s||e.target.hasAttribute('data-close'))s.hidden=true});
+});
+
+// 완료 표시 / 수정
+document.querySelector('.board').addEventListener('click',e=>{
+  const ed=e.target.closest('[data-edit]');
+  if(ed){openEdit(db.items.find(i=>i.id===+ed.dataset.edit));return}
+  const dl=e.target.closest('[data-del]');
+  if(dl){
+    if(!dl.classList.contains('armed')){
+      document.querySelectorAll('.del.armed').forEach(x=>{x.classList.remove('armed');x.textContent='삭제'});
+      dl.classList.add('armed');dl.textContent='삭제?';
+      setTimeout(()=>{if(dl.isConnected){dl.classList.remove('armed');dl.textContent='삭제'}},3000);
+      return;
+    }
+    db.items=db.items.filter(i=>i.id!==+dl.dataset.del);save();render();return;
+  }
+  const ln=e.target.closest('.line'); if(!ln) return;
+  const it=db.items.find(i=>i.id===+ln.dataset.id); it.done=!it.done; save(); render();
+});
+document.querySelector('.board').addEventListener('keydown',e=>{
+  if((e.key===' '||e.key==='Enter')&&e.target.classList.contains('line')){e.preventDefault();e.target.click()}
+});
+
+function syncFields(){
+  const k=$('#e-kind').value;
+  $('#w-place').hidden=k!=='unload';
+  $('#w-to').hidden=k!=='same';
+}
+$('#e-kind').onchange=syncFields;
+let delArmed=false;
+function openEdit(it,preset){
+  editId=it?it.id:null; delArmed=false;
+  $('#eTitle').textContent=it?'배차 수정':'배차 추가';
+  const [gr,k]=it?[it.group,it.kind]:preset.split(':');
+  $('#e-group').value=gr; $('#e-kind').value=k;
+  $('#e-cars').value=it?it.cars.join(' '):'';
+  $('#e-place').value=it?it.place:'';
+  $('#e-item').value=it?it.item:(k==='unload'?'':'TDI');
+  $('#e-to').value=it?it.to:(gr==='kj'?'광진화학당진':'');
+  $('#eDel').hidden=!it; $('#eDel').textContent='삭제';
+  syncFields(); show('#sEdit'); setTimeout(()=>$('#e-cars').focus(),50);
+}
+document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>openEdit(null,b.dataset.add));
+$('#fEdit').onsubmit=e=>{
+  e.preventDefault();
+  const v={group:$('#e-group').value,kind:$('#e-kind').value,
+    cars:$('#e-cars').value.trim().split(/\s+/).filter(Boolean),
+    place:$('#e-place').value.trim(),item:$('#e-item').value.trim(),to:$('#e-to').value.trim()};
+  if(editId) Object.assign(db.items.find(i=>i.id===editId),v);
+  else db.items.push({id:db.next++,day:cur,done:false,...v});
+  save(); $('#sEdit').hidden=true; render();
+};
+$('#eDel').onclick=()=>{
+  if(!delArmed){delArmed=true;$('#eDel').textContent='한 번 더 누르면 삭제';return}
+  db.items=db.items.filter(i=>i.id!==editId); save(); $('#sEdit').hidden=true; render();
+};
+
+// 붙여넣기
+$('#openPaste').onclick=()=>{$('#pasteTxt').value='';show('#sPaste');setTimeout(()=>$('#pasteTxt').focus(),50)};
+$('#fPaste').onsubmit=e=>{
+  e.preventDefault();
+  const p=parse($('#pasteTxt').value,cur);
+  if(!p.items.length){$('#pasteTxt').placeholder='배차 줄을 찾지 못했습니다. "하차지 / 차번" 형식인지 확인하세요.';$('#pasteTxt').value='';return}
+  const days=[...new Set(p.items.map(i=>i.day))].sort();
+  db.items=db.items.filter(i=>!days.includes(i.day));
+  p.items.forEach(it=>db.items.push({id:db.next++,done:false,...it}));
+  cur=days[0]; save(); $('#sPaste').hidden=true; render();
+  $('#hint').textContent=`${days.length}일치, ${nCars(p.items)}대를 넣었습니다.`;
+};
+
+// 카톡용 복사
+if(navigator.share&&matchMedia('(pointer:coarse)').matches){
+  $('#share').hidden=false;
+  $('#share').onclick=()=>{navigator.share({text:toText()}).catch(()=>{})};
+}
+$('#quickCopy').onclick=()=>{
+  const b=$('#quickCopy'), txt=toText();
+  const done=()=>{b.textContent='복사됨 ✓ 카톡에 Ctrl+V';setTimeout(()=>b.textContent='카톡용 복사',2500)};
+  const fallback=()=>{$('#copyTxt').value=txt;show('#sCopy');$('#copyTxt').focus();$('#copyTxt').select();$('#copyBtn').textContent='선택됨, Ctrl+C로 복사'};
+  try{navigator.clipboard.writeText(txt).then(done,fallback)}catch(e){fallback()}
+};
+$('#copyDays').onchange=e=>{$('#copyTxt').value=rangeText(+e.target.value);$('#copyBtn').textContent='복사'};
+$('#openCopy').onclick=()=>{$('#copyDays').value='1';$('#copyTxt').value=toText();$('#copyBtn').textContent='복사';show('#sCopy')};
+$('#copyBtn').onclick=()=>{
+  const t=$('#copyTxt');
+  const fallback=()=>{t.focus();t.select();$('#copyBtn').textContent='선택됨, 길게 눌러 복사'};
+  try{navigator.clipboard.writeText(t.value).then(()=>$('#copyBtn').textContent='복사됨',fallback)}catch(e){fallback()}
+};
+
+// 상차만 → 내일 하차 칸
+$('#carry').onclick=()=>{
+  const nd=addDays(cur,1); let n=0;
+  db.items.filter(i=>i.day===cur&&i.kind==='load'&&!i.carried).forEach(i=>{
+    db.items.push({id:db.next++,day:nd,group:i.group,kind:'unload',cars:[...i.cars],item:i.item,place:'',to:'',done:false});
+    n+=i.cars.length; i.carried=true;
+  });
+  save(); cur=nd; render();
+  $('#hint').textContent=`${n}대를 ${nd} 익착 칸으로 넘겼습니다. 하차지는 ‘수정’으로 넣어 주세요.`;
+};
+
+render();
+</script>
+</body>
+</html>
