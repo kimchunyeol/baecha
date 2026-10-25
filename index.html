@@ -610,8 +610,8 @@ $('#bkFile').onchange=e=>{
 };
 
 // 회사 차량 기본 목록 (뒤 4자리)
-const DEFAULT_FLEET='2503 2636 3611 4450 4693 5233 5250 5278 5294 5693 7552 1265 7570 7577 7584 7587 7597 7598 7600 8224 8515 8796 9904 4649'.split(' ');
-if(!db.fleetSeeded){db.fleet=[...new Set([...(db.fleet||[]),...DEFAULT_FLEET])];db.fleetSeeded=1;save()}
+const DEFAULT_FLEET='2503 2636 3611 4450 4693 5233 5250 5278 5294 5693 7552 1265 7570 7577 7584 7587 7597 7598 7600 8224 8515 8796 9904 4649 5273 7497'.split(' ');
+if((db.fleetSeeded||0)<2){db.fleet=[...new Set([...(db.fleet||[]),...DEFAULT_FLEET])];db.fleetSeeded=2;save()}
 // 차량 목록 · 여러 대 고르기
 const toks=s=>s.trim().split(/[\s,]+/).filter(Boolean);
 const curCars=()=>toks($('#e-cars').value);
