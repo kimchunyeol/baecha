@@ -186,11 +186,11 @@ body{margin:0}
   </div>
 
   <div class="foot">
-    <span id="hint">‘상차만’ 차는 내일로 넘기면 내일 익착 칸에 들어갑니다.</span>
+    <span id="hint">‘상차만’ 차는 날짜를 골라 넘기면 그 날 익착 칸에 들어갑니다.</span>
     <span class="right">
       <button id="fleetBtn">차량 목록</button>
       <button id="clearDay">이 날 배차 전부 지우기</button>
-      <button id="carry">상차만 → 내일로 넘기기</button>
+      <button id="carry">상차만 → 날짜 골라 넘기기</button>
     </span>
   </div>
 
@@ -205,6 +205,17 @@ body{margin:0}
       <input type="file" id="bkFile" accept=".json,application/json" hidden>
     </div>
   </div>
+</div>
+
+<!-- 상차만 넘기기 -->
+<div class="sheet" id="sCarry" hidden>
+  <form class="box" id="fCarry">
+    <h3>상차만 넘기기</h3>
+    <p id="carryInfo"></p>
+    <label class="full">넘길 날짜<input type="date" id="carryDate" required></label>
+    <p id="carryDay"></p>
+    <div class="btns"><button type="button" data-close>취소</button><button type="submit" class="primary">이 날짜로 넘기기</button></div>
+  </form>
 </div>
 
 <!-- 차량 목록 -->
@@ -335,7 +346,7 @@ function render(){
   $('#n-c3').textContent=c(kj);
   const loads=d.filter(i=>i.kind==='load'&&!i.carried);
   $('#carry').disabled=!loads.length;
-  $('#carry').textContent=loads.length?`상차만 ${nCars(loads)}대 → 내일로 넘기기`:'넘길 상차만 차 없음';
+  $('#carry').textContent=loads.length?`상차만 ${nCars(loads)}대 → 날짜 골라 넘기기`:'넘길 상차만 차 없음';
 }
 
 // 배차 → 카톡 글
@@ -545,8 +556,8 @@ $('#copyBtn').onclick=()=>{
 };
 
 // 상차만 → 내일 하차 칸
-$('#carry').onclick=()=>{
-  const nd=addDays(cur,1); let n=0;
+function doCarry(nd){
+  let n=0;
   db.items.filter(i=>i.day===cur&&i.kind==='load'&&!i.carried).forEach(i=>{
     db.items.push({id:db.next++,day:nd,group:i.group,kind:'unload',cars:[...i.cars],item:i.item,place:'',to:'',done:false});
     n+=i.cars.length; i.carried=true;
@@ -681,6 +692,27 @@ openEdit=function(a,b){renderDest();_openEdit3(a,b)};
 // 광진 익착은 하차지를 광진화학당진으로 미리 채움
 const _openEdit4=openEdit;
 openEdit=function(a,b){_openEdit4(a,b);if(!a&&b==='kj:unload')$('#e-place').value='광진화학당진'};
+
+// 상차만 → 고른 날짜의 익착
+function carryDayInfo(){
+  const v=$('#carryDate').value; if(!v){$('#carryDay').textContent='';return}
+  const d=new Date(v+'T00:00'), h=hol(v);
+  $('#carryDay').textContent=`${d.getMonth()+1}월 ${d.getDate()}일 ${WD[d.getDay()]}요일${h?' · '+h:''}`;
+}
+$('#carry').onclick=()=>{
+  const n=nCars(db.items.filter(i=>i.day===cur&&i.kind==='load'&&!i.carried));
+  if(!n)return;
+  let nd=addDays(cur,1);
+  while(new Date(nd+'T00:00').getDay()===0||hol(nd))nd=addDays(nd,1); // 일요일·공휴일은 건너뛴 날을 먼저 보여줌
+  $('#carryInfo').textContent=`상차만 ${n}대를 고른 날짜의 익착 칸으로 넘깁니다.`;
+  $('#carryDate').min=addDays(cur,1); $('#carryDate').value=nd; carryDayInfo(); show('#sCarry');
+};
+$('#carryDate').addEventListener('input',carryDayInfo);
+$('#fCarry').onsubmit=e=>{
+  e.preventDefault();
+  const v=$('#carryDate').value; if(!v||v<=cur)return;
+  $('#sCarry').hidden=true; doCarry(v);
+};
 
 render();
 </script>
