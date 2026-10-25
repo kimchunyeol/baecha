@@ -177,11 +177,12 @@ body{margin:0}
       <div class="col-head"><div><h2>광진화학</h2><small>광진 전용</small></div><span class="count" id="n-c3"></span></div>
       <div class="sub">익착</div>
       <div class="list" id="l3a"></div>
+      <button class="add" data-add="kj:unload">+ 광진 익착 추가</button>
       <div class="sub">당착</div>
       <div class="list" id="l3b"></div>
       <div class="sub">상차만</div>
       <div class="list" id="l3c"></div>
-      <button class="add" data-add="kj:same">+ 광진 추가</button>
+      <button class="add" data-add="kj:same">+ 광진 당착·상차 추가</button>
     </section>
   </div>
 
@@ -325,11 +326,10 @@ function render(){
   fill('#l1',g('unid','unload'),'어제 실어 둔 차가 없습니다.');
   fill('#l2a',g('unid','same'),'없음');
   fill('#l2b',g('unid','load'),'없음');
-  fill('#l3a',g('kj','unload'),'',true);
-  fill('#l3b',g('kj','same'),'',true);
-  fill('#l3c',g('kj','load'),'',true);
+  fill('#l3a',g('kj','unload'),'없음');
+  fill('#l3b',g('kj','same'),'없음');
+  fill('#l3c',g('kj','load'),'없음');
   const kj=d.filter(i=>i.group==='kj');
-  if(!kj.length){$('#l3a').hidden=false;$('#l3a').innerHTML='<div class="empty">광진 배차가 없습니다.</div>'}
   const c=a=>`${nDone(a)}/${nCars(a)}대`;
   $('#n-c1').textContent=c(g('unid','unload'));
   $('#n-c2').textContent=c([...g('unid','same'),...g('unid','load')]);
@@ -680,6 +680,10 @@ function renderDest(){
 }
 const _openEdit3=openEdit;
 openEdit=function(a,b){renderDest();_openEdit3(a,b)};
+
+// 광진 익착은 하차지를 광진화학당진으로 미리 채움
+const _openEdit4=openEdit;
+openEdit=function(a,b){_openEdit4(a,b);if(!a&&b==='kj:unload')$('#e-place').value='광진화학당진'};
 
 render();
 </script>
