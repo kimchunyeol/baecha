@@ -232,7 +232,7 @@ body{margin:0}
     </div>
     <label class="full" id="w-place">하차지·시간<input id="e-place" placeholder="천보 14시"></label>
     <label id="w-item" class="full">상차지<input id="e-item" placeholder="직접 쓰거나 아래에서 고르기"><span class="opts" id="itemOpts"></span></label>
-    <label id="w-to">하차지<input id="e-to" placeholder="광진화학당진"></label>
+    <label id="w-to" class="full">하차지<input id="e-to" placeholder="비워 두면 상차만"></label>
     <div class="btns">
       <button type="button" id="eDel" class="left">삭제</button>
       <button type="button" data-close>취소</button>
@@ -488,7 +488,7 @@ document.querySelector('.board').addEventListener('keydown',e=>{
 function syncFields(){
   const k=$('#e-kind').value;
   $('#w-place').hidden=k!=='unload';
-  $('#w-to').hidden=k!=='same';
+  $('#w-to').hidden=k==='unload';
 }
 $('#e-kind').onchange=syncFields;
 let delArmed=false;
@@ -668,6 +668,12 @@ $('#itemOpts').onclick=e=>{
 $('#e-item').addEventListener('input',renderLoads);
 const _openEdit2=openEdit;
 openEdit=function(a,b){_openEdit2(a,b);renderLoads()};
+
+// 하차지: 쓰면 당착, 비우면 상차만
+$('#e-to').addEventListener('input',()=>{
+  if($('#e-kind').value==='unload')return;
+  $('#e-kind').value=$('#e-to').value.trim()?'same':'load';
+});
 
 render();
 </script>
