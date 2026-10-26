@@ -112,6 +112,8 @@ textarea.mono{font-family:var(--f-mono);font-size:14px;line-height:1.5}
 .cal-day.hol .d{color:var(--c3)}
 .cal-day .h{font-family:var(--f-body);font-size:10px;line-height:1.1;color:var(--c3);text-align:center;overflow-wrap:anywhere}
 .cal-day.sel .h{color:inherit}
+.daytag{font-weight:700;font-size:14px;color:var(--muted);white-space:nowrap}
+.daytag.tm{color:var(--accent-ink);background:var(--accent);border-radius:999px;padding:2px 10px}
 .holname{color:var(--c3);font-weight:700;font-size:14px}
 .cal-day .n{font-family:var(--f-body);font-size:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:0 6px;white-space:nowrap}
 @media (max-width:760px){.tabs{display:flex}.board{grid-template-columns:1fr}.col:not(.on){display:none}}
@@ -128,6 +130,7 @@ body{margin:0}
     <div class="date">
       <button id="prev" aria-label="전날">◀</button>
       <input type="date" id="day">
+      <span id="dayTag" class="daytag"></span>
       <button id="next" aria-label="다음날">▶</button>
       <button id="calToggle" aria-expanded="true">달력 접기 ▲</button>
       <span class="holname" id="holName"></span>
@@ -280,7 +283,7 @@ const fmt=d=>d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());
 const addDays=(s,n)=>{const d=new Date(s+'T00:00');d.setDate(d.getDate()+n);return fmt(d)};
 const WD=['일','월','화','수','목','금','토'];
 let today=fmt(new Date());
-let cur=today, editId=null;
+let cur=addDays(today,1), editId=null; // 배차는 내일 일을 짜니까 내일부터 열기
 
 
 // 카톡 글 → 배차 목록
@@ -752,8 +755,17 @@ $('#bkFile').addEventListener('change',e=>{
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden)return;
   const t=fmt(new Date()); if(t===today)return;
-  if(cur===today)cur=t; today=t; render();
+  if(cur===addDays(today,1))cur=addDays(t,1); today=t; render();
 });
+
+// 열면 내일 배차부터 + 날짜 옆에 오늘/내일 표시
+function dayTag(){
+  const t=$('#dayTag'), d=Math.round((new Date(cur+'T00:00')-new Date(today+'T00:00'))/86400000);
+  t.textContent=d===0?'오늘':d===1?'내일':d===2?'모레':d<0?`${-d}일 전`:`${d}일 뒤`;
+  t.className='daytag'+(d===1?' tm':'');
+}
+const _render3=render;
+render=function(){_render3();dayTag()};
 
 render();
 </script>
