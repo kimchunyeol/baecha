@@ -639,7 +639,7 @@ function renderPicker(){
   const used=new Set(db.items.filter(i=>i.day===cur&&i.id!==editId).flatMap(i=>i.cars));
   $('#pickCount').textContent=sel.size?`· ${sel.size}대 선택`:'';
   $('#picker').innerHTML=f.length
-    ?f.map(c=>`<span class="pw ${rmArmed===c?'armed':''}"><button type="button" class="pick ${sel.has(c)?'on':''} ${used.has(c)?'used':''}" data-car="${esc(c)}" aria-pressed="${sel.has(c)}">${rmArmed===c?'삭제?':esc(c)}</button><button type="button" class="rm ${rmArmed===c?'armed':''}" data-rm="${esc(c)}" aria-label="${esc(c)} 목록에서 빼기" title="목록에서 빼기">×</button></span>`).join('')
+    ?f.map(c=>`<button type="button" class="pick ${sel.has(c)?'on':''} ${used.has(c)?'used':''}" data-car="${esc(c)}" aria-pressed="${sel.has(c)}">${esc(c)}</button>`).join('')
     :'<div class="empty" style="grid-column:1/-1">차량 목록이 비어 있어요. ‘차량 목록 고치기’에 회사 차 번호를 한 번 넣어 두면 여기서 눌러서 고를 수 있어요.</div>';
 }
 $('#picker').onclick=e=>{
