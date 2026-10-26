@@ -93,7 +93,7 @@ textarea.mono{font-family:var(--f-mono);font-size:14px;line-height:1.5}
 .pickhead{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--muted)}
 .pickhead b{color:var(--ink)}
 .linkbtn{border:none;background:none;padding:2px 0;font-size:12px;color:var(--c1);text-decoration:underline}
-.picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;max-height:230px;overflow:auto;padding:2px}
+.picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;max-height:240px;overflow:auto;padding:8px 8px 4px 2px}
 .pick{font-family:var(--f-mono);font-weight:600;font-size:15px;padding:9px 2px;font-variant-numeric:tabular-nums}
 .pick.used{opacity:.4}
 .pick.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);opacity:1}
@@ -101,6 +101,12 @@ textarea.mono{font-family:var(--f-mono);font-size:14px;line-height:1.5}
 .opts{display:flex;flex-wrap:wrap;gap:4px}
 .opt{padding:6px 9px;font-size:13px;font-weight:400}
 .opt.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.pw{position:relative;display:flex}
+.pw .pick{flex:1}
+.rm{position:absolute;top:-6px;right:-6px;width:22px;height:22px;padding:0;border-radius:50%;display:grid;place-items:center;font-size:13px;line-height:1;font-weight:700;background:var(--c3);border-color:var(--c3);color:#fff;opacity:0;pointer-events:none;transition:opacity .12s}
+.pw:hover .rm,.pw:focus-within .rm,.rm.armed{opacity:1;pointer-events:auto}
+@media (hover:none){.rm{opacity:.85;pointer-events:auto}}
+.pw.armed .pick{background:var(--c3);border-color:var(--c3);color:#fff;opacity:1}
 .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
 .cal-wd{text-align:center;font-size:12px;color:var(--muted);font-weight:700;padding:2px 0}
 .cal-day{border:1px solid transparent;background:var(--bg);border-radius:6px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:50px;font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums}
@@ -114,6 +120,7 @@ textarea.mono{font-family:var(--f-mono);font-size:14px;line-height:1.5}
 .cal-day.sel .h{color:inherit}
 .daytag{font-weight:700;font-size:14px;color:var(--muted);white-space:nowrap}
 .daytag.tm{color:var(--accent-ink);background:var(--accent);border-radius:999px;padding:2px 10px}
+#calToggle{white-space:nowrap}
 .holname{color:var(--c3);font-weight:700;font-size:14px}
 .cal-day .n{font-family:var(--f-body);font-size:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:0 6px;white-space:nowrap}
 @media (max-width:760px){.tabs{display:flex}.board{grid-template-columns:1fr}.col:not(.on){display:none}}
@@ -283,6 +290,7 @@ const fmt=d=>d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());
 const addDays=(s,n)=>{const d=new Date(s+'T00:00');d.setDate(d.getDate()+n);return fmt(d)};
 const WD=['일','월','화','수','목','금','토'];
 let today=fmt(new Date());
+let rmArmed=null;
 let cur=addDays(today,1), editId=null; // 배차는 내일 일을 짜니까 내일부터 열기
 
 
@@ -631,7 +639,7 @@ function renderPicker(){
   const used=new Set(db.items.filter(i=>i.day===cur&&i.id!==editId).flatMap(i=>i.cars));
   $('#pickCount').textContent=sel.size?`· ${sel.size}대 선택`:'';
   $('#picker').innerHTML=f.length
-    ?f.map(c=>`<button type="button" class="pick ${sel.has(c)?'on':''} ${used.has(c)?'used':''}" data-car="${esc(c)}" aria-pressed="${sel.has(c)}">${esc(c)}</button>`).join('')
+    ?f.map(c=>`<span class="pw ${rmArmed===c?'armed':''}"><button type="button" class="pick ${sel.has(c)?'on':''} ${used.has(c)?'used':''}" data-car="${esc(c)}" aria-pressed="${sel.has(c)}">${rmArmed===c?'삭제?':esc(c)}</button><button type="button" class="rm ${rmArmed===c?'armed':''}" data-rm="${esc(c)}" aria-label="${esc(c)} 목록에서 빼기" title="목록에서 빼기">×</button></span>`).join('')
     :'<div class="empty" style="grid-column:1/-1">차량 목록이 비어 있어요. ‘차량 목록 고치기’에 회사 차 번호를 한 번 넣어 두면 여기서 눌러서 고를 수 있어요.</div>';
 }
 $('#picker').onclick=e=>{
@@ -766,6 +774,23 @@ function dayTag(){
 }
 const _render3=render;
 render=function(){_render3();dayTag()};
+
+// 차량 버튼 위 × 로 목록에서 빼기 (한 번 더 눌러야 삭제)
+$('#picker').addEventListener('click',e=>{
+  const x=e.target.closest('[data-rm]'); if(!x)return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  const c=x.dataset.rm;
+  if(rmArmed!==c){
+    rmArmed=c; renderPicker();
+    setTimeout(()=>{if(rmArmed===c){rmArmed=null;renderPicker()}},3000);
+    return;
+  }
+  rmArmed=null;
+  db.fleet=(db.fleet||[]).filter(v=>v!==c);
+  $('#e-cars').value=curCars().filter(v=>v!==c).join(' ');
+  save(); renderPicker();
+  $('#hint').textContent=`${c}를 차량 목록에서 뺐습니다.`;
+},true);
 
 render();
 </script>
