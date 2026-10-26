@@ -714,6 +714,12 @@ $('#fCarry').onsubmit=e=>{
   $('#sCarry').hidden=true; doCarry(v);
 };
 
+// 저장할 때: 하차지 비우면 상차만, 쓰면 당착
+document.addEventListener('submit',e=>{
+  if(e.target.id!=='fEdit'||$('#e-kind').value==='unload')return;
+  $('#e-kind').value=$('#e-to').value.trim()?'same':'load';
+},true);
+
 render();
 </script>
 </body>
