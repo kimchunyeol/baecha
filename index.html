@@ -661,7 +661,7 @@ $('#fFleet').onsubmit=e=>{
 };
 
 // 상차지 고르기
-const LOADS=['본공장','TDI','금호','대아'];
+const LOADS=['본공장','TDI','금호','대아탱크','유니드울산'];
 function renderLoads(){
   const v=$('#e-item').value.trim();
   $('#itemOpts').innerHTML=LOADS.map(x=>`<button type="button" class="opt ${v===x?'on':''}" data-load="${x}" aria-pressed="${v===x}">${x}</button>`).join('');
