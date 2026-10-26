@@ -279,7 +279,7 @@ const z=n=>String(n).padStart(2,'0');
 const fmt=d=>d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate());
 const addDays=(s,n)=>{const d=new Date(s+'T00:00');d.setDate(d.getDate()+n);return fmt(d)};
 const WD=['일','월','화','수','목','금','토'];
-const today=fmt(new Date());
+let today=fmt(new Date());
 let cur=today, editId=null;
 
 
@@ -418,7 +418,7 @@ function toText(day=cur){
     const a=d.filter(i=>i.group===gr); if(!a.length) continue;
     if(L.length>1) L.push('');
     L.push(`<${name}>`);
-    const un=a.filter(i=>i.kind==='unload'), up=a.filter(i=>i.kind!=='unload');
+    const un=a.filter(i=>i.kind==='unload'), up=[...a.filter(i=>i.kind==='same'),...a.filter(i=>i.kind==='load')];
     un.forEach(i=>L.push(`${i.place||'하차지 미정'} / ${i.cars.join(' ')}`));
     if(un.length&&up.length) L.push('');
     up.forEach(i=>L.push(`${i.cars.join(' ')} ${i.item} / ${i.kind==='load'?'상차만':i.to}`.replace(/\s+\//,' /')));
@@ -559,7 +559,7 @@ $('#copyBtn').onclick=()=>{
 function doCarry(nd){
   let n=0;
   db.items.filter(i=>i.day===cur&&i.kind==='load'&&!i.carried).forEach(i=>{
-    db.items.push({id:db.next++,day:nd,group:i.group,kind:'unload',cars:[...i.cars],item:i.item,place:'',to:'',done:false});
+    db.items.push({id:db.next++,day:nd,group:i.group,kind:'unload',cars:[...i.cars],item:i.item,place:'',to:'',done:false,from:i.id});
     n+=i.cars.length; i.carried=true;
   });
   save(); cur=nd; render();
@@ -641,7 +641,7 @@ $('#e-cars').addEventListener('input',renderPicker);
 const _openEdit=openEdit;
 openEdit=function(a,b){_openEdit(a,b);renderPicker()};
 $('#fEdit').addEventListener('submit',()=>{
-  const add=toks($('#e-cars').value);
+  const add=toks($('#e-cars').value).filter(x=>/^\d{4}$/.test(x));
   db.fleet=[...new Set([...(db.fleet||[]),...add])]; save();
 });
 function fleetCount(){$('#fleetN').textContent=`${new Set(toks($('#fleetTxt').value)).size}대`}
@@ -666,7 +666,7 @@ function renderLoads(){
 $('#itemOpts').onclick=e=>{
   const b=e.target.closest('[data-load]'); if(!b)return;
   e.preventDefault();
-  $('#e-item').value=$('#e-item').value.trim()===b.dataset.load?'':b.dataset.load;
+  $('#e-item').value=b.dataset.load;
   renderLoads();
 };
 $('#e-item').addEventListener('input',renderLoads);
@@ -719,6 +719,41 @@ document.addEventListener('submit',e=>{
   if(e.target.id!=='fEdit'||$('#e-kind').value==='unload')return;
   $('#e-kind').value=$('#e-to').value.trim()?'same':'load';
 },true);
+
+// ── 점검 후 고친 것들 ──
+// 1) 저장 전 확인: 차번이 비었거나 4자리가 아니면 막기
+document.addEventListener('submit',e=>{
+  if(e.target.id!=='fEdit')return;
+  const c=toks($('#e-cars').value), bad=c.filter(x=>!/^\d{4}$/.test(x));
+  if(!c.length||bad.length){
+    e.preventDefault(); e.stopImmediatePropagation();
+    const el=$('#e-cars');
+    el.setCustomValidity(!c.length?'차를 한 대 이상 골라 주세요.':`차번은 4자리 숫자예요: ${bad.join(', ')}`);
+    el.reportValidity(); setTimeout(()=>el.setCustomValidity(''),2000);
+  }
+},true);
+// 2) 넘긴 익착을 지우면 원래 상차만을 다시 넘길 수 있게
+document.querySelector('.board').addEventListener('click',e=>{
+  const dl=e.target.closest('[data-del]'); if(!dl)return;
+  setTimeout(()=>{
+    let ch=false;
+    db.items.forEach(i=>{if(i.carried&&!db.items.some(x=>x.from===i.id)){i.carried=false;ch=true}});
+    if(ch){save();render()}
+  },0);
+},true);
+// 3) 백업 불러오기 때 차량 목록도 되살리기
+$('#bkFile').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{const v=JSON.parse(r.result);if(Array.isArray(v.fleet)&&v.fleet.length){db.fleet=[...new Set([...(db.fleet||[]),...v.fleet])];save()}}catch(err){}};
+  r.readAsText(f);
+},true);
+// 4) 컴퓨터를 켜 둔 채 날짜가 바뀌면 오늘 날짜 다시 맞추기
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)return;
+  const t=fmt(new Date()); if(t===today)return;
+  if(cur===today)cur=t; today=t; render();
+});
 
 render();
 </script>
