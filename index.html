@@ -121,6 +121,7 @@ textarea.mono{font-family:var(--f-mono);font-size:14px;line-height:1.5}
 .daytag{font-weight:700;font-size:14px;color:var(--muted);white-space:nowrap}
 .daytag.tm{color:var(--accent-ink);background:var(--accent);border-radius:999px;padding:2px 10px}
 #calToggle{white-space:nowrap}
+.warnline,#hint.warn{color:var(--c3)!important;font-weight:700}
 .holname{color:var(--c3);font-weight:700;font-size:14px}
 .cal-day .n{font-family:var(--f-body);font-size:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:0 6px;white-space:nowrap}
 @media (max-width:760px){.tabs{display:flex}.board{grid-template-columns:1fr}.col:not(.on){display:none}}
@@ -277,6 +278,7 @@ body{margin:0}
     <h3>카톡용 글</h3>
     <p>복사해서 단톡방에 붙여넣으세요. 휴일처럼 여러 날을 한 번에 보낼 때는 며칠치를 고르세요.</p>
     <label class="full">며칠치<select id="copyDays"><option value="1">이 날만</option><option value="2">2일치</option><option value="3">3일치</option><option value="4">4일치</option><option value="5">5일치</option><option value="7">7일치</option></select></label>
+    <p id="copyWarn" class="warnline" hidden></p>
     <textarea id="copyTxt" class="mono full" rows="14" readonly></textarea>
     <div class="btns"><button type="button" data-close>닫기</button><button type="button" id="copyBtn" class="primary">복사</button></div>
   </div>
@@ -791,6 +793,28 @@ $('#picker').addEventListener('click',e=>{
   save(); renderPicker();
   $('#hint').textContent=`${c}를 차량 목록에서 뺐습니다.`;
 },true);
+
+// 점검 2차: Esc로 창 닫기, 미리보기에 하차지 미정 경고, 같은 차 두 번 배차 경고
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape')return;
+  document.querySelectorAll('.sheet').forEach(s=>s.hidden=true);
+});
+function copyWarn(){
+  const n=($('#copyTxt').value.match(/하차지 미정/g)||[]).length;
+  $('#copyWarn').textContent=n?`하차지 미정이 ${n}줄 있어요. 보내기 전에 ‘수정’으로 하차지를 넣어 주세요.`:'';
+  $('#copyWarn').hidden=!n;
+}
+$('#openCopy').addEventListener('click',copyWarn);
+$('#copyDays').addEventListener('change',copyWarn);
+function dupCheck(){
+  const seen={},dup=new Set();
+  db.items.filter(i=>i.day===cur).forEach(i=>i.cars.forEach(c=>{if(seen[c])dup.add(c);seen[c]=1}));
+  const h=$('#hint');
+  if(dup.size){h.textContent=`${[...dup].join(', ')} 차가 이 날 두 번 배차돼 있어요. 맞는지 확인해 주세요.`;h.classList.add('warn')}
+  else h.classList.remove('warn');
+}
+$('#fEdit').addEventListener('submit',()=>setTimeout(dupCheck,0));
+new MutationObserver(()=>{const h=$('#hint');if(!h.textContent.includes('두 번 배차'))h.classList.remove('warn')}).observe($('#hint'),{childList:true,characterData:true,subtree:true});
 
 render();
 </script>
