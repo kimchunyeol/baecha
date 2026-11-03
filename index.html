@@ -31,7 +31,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;justify-content:space-between}
 h1{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;letter-spacing:.5px}
-.date{display:flex;align-items:center;gap:6px}
+.date{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.date input{width:auto}
 .date input{font-family:var(--f-mono);font-size:15px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
 .tools{display:flex;gap:8px;flex-wrap:wrap}
 button{font-family:var(--f-body);font-size:14px;cursor:pointer;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 12px}
@@ -122,6 +123,10 @@ textarea.mono{font-family:var(--f-mono);font-size:14px;line-height:1.5}
 .daytag.tm{color:var(--accent-ink);background:var(--accent);border-radius:999px;padding:2px 10px}
 #calToggle{white-space:nowrap}
 .warnline,#hint.warn{color:var(--c3)!important;font-weight:700}
+.idle{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--muted)}
+.idle strong{color:var(--ink);font-size:14px;margin-right:4px}
+.idle .car{font-size:14px}
+.idle.all strong{color:var(--c2)}
 .holname{color:var(--c3);font-weight:700;font-size:14px}
 .cal-day .n{font-family:var(--f-body);font-size:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:0 6px;white-space:nowrap}
 @media (max-width:760px){.tabs{display:flex}.board{grid-template-columns:1fr}.col:not(.on){display:none}}
@@ -195,6 +200,8 @@ body{margin:0}
       <button class="add" data-add="kj:same">+ 광진 당착·상차 추가</button>
     </section>
   </div>
+
+  <div class="idle" id="idle"></div>
 
   <div class="foot">
     <span id="hint">‘상차만’ 차는 날짜를 골라 넘기면 그 날 익착 칸에 들어갑니다.</span>
@@ -815,6 +822,21 @@ function dupCheck(){
 }
 $('#fEdit').addEventListener('submit',()=>setTimeout(dupCheck,0));
 new MutationObserver(()=>{const h=$('#hint');if(!h.textContent.includes('두 번 배차'))h.classList.remove('warn')}).observe($('#hint'),{childList:true,characterData:true,subtree:true});
+
+// 아직 배차 안 된 차
+function renderIdle(){
+  const used=new Set(db.items.filter(i=>i.day===cur).flatMap(i=>i.cars));
+  const fleet=[...new Set(db.fleet||[])].sort();
+  const idle=fleet.filter(c=>!used.has(c));
+  const el=$('#idle');
+  el.classList.toggle('all',!idle.length);
+  el.innerHTML=idle.length
+    ?`<strong>안 나간 차 ${idle.length}대</strong>${idle.map(c=>`<span class="car">${esc(c)}</span>`).join('')}`
+    :`<strong>${fleet.length}대 모두 배차됐어요</strong>`;
+}
+const _render4=render;
+render=function(){_render4();renderIdle()};
+$('#fFleet').addEventListener('submit',()=>setTimeout(renderIdle,0));
 
 render();
 </script>
