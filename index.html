@@ -208,7 +208,7 @@ body{margin:0}
     <button data-tab="c1" aria-selected="true">유니드 익착</button>
     <button data-tab="c2" aria-selected="false">유니드 당착</button>
     <button data-tab="c3" aria-selected="false">광진</button>
-    <button data-tab="c4" aria-selected="false">기타</button>
+    <button data-tab="c4" aria-selected="false">외부</button>
   </div>
 
   <div class="board">
@@ -240,15 +240,15 @@ body{margin:0}
     </section>
 
     <section class="col" id="c4" style="--k:var(--c4)">
-      <div class="col-head"><div><h2>기타</h2><small>OCI · 여수백광 · LG · 한익스</small></div><span class="count" id="n-c4"></span></div>
+      <div class="col-head"><div><h2>외부</h2><small>OCI · 여수백광 · LG · 한익스</small></div><span class="count" id="n-c4"></span></div>
       <div class="sub">익착</div>
       <div class="list" id="l4a"></div>
-      <button class="add" data-add="etc:unload">+ 기타 익착 추가</button>
+      <button class="add" data-add="etc:unload">+ 외부 익착 추가</button>
       <div class="sub">당착</div>
       <div class="list" id="l4b"></div>
       <div class="sub">상차만</div>
       <div class="list" id="l4c"></div>
-      <button class="add" data-add="etc:same">+ 기타 당착·상차 추가</button>
+      <button class="add" data-add="etc:same">+ 외부 당착·상차 추가</button>
     </section>
   </div>
 
@@ -337,7 +337,7 @@ body{margin:0}
 <div class="sheet" id="sEdit" hidden>
   <form class="box" id="fEdit">
     <h3 id="eTitle">추가</h3>
-    <label>화주<select id="e-group"><option value="unid">유니드</option><option value="kj">광진</option><option value="etc">기타</option></select></label>
+    <label>화주<select id="e-group"><option value="unid">유니드</option><option value="kj">광진</option><option value="etc">외부</option></select></label>
     <label>종류<select id="e-kind"><option value="unload">익착 (어제 상차 → 오늘 하차)</option><option value="same">당착 (오늘 상차 → 오늘 하차)</option><option value="load">상차만</option></select></label>
     <label class="full">차번 (띄어쓰기로 여러 대)<input id="e-cars" placeholder="1234 5678" inputmode="numeric" required></label>
     <div class="full pickwrap">
@@ -522,7 +522,7 @@ function renderCal(){
 function toText(day=cur){
   const d=db.items.filter(i=>i.day===day), dt=new Date(day+'T00:00');
   const L=[`${dt.getMonth()+1}/${dt.getDate()}(${WD[dt.getDay()]}요일)`];
-  for(const [gr,name] of [['unid','유니드'],['kj','광진'],['etc','기타']]){
+  for(const [gr,name] of [['unid','유니드'],['kj','광진'],['etc','외부']]){
     const a=d.filter(i=>i.group===gr); if(!a.length) continue;
     if(L.length>1) L.push('');
     L.push(`<${name}>`);
@@ -1076,7 +1076,7 @@ function renderStat(){
   $('#statInfo').textContent=workDays?`${y}년 ${+mo}월 · 배차한 날 ${workDays}일. 한 차가 한 줄에 들어가면 1번으로 세요.`:`${y}년 ${+mo}월에는 배차 기록이 없어요.`;
   const td=v=>`<td class="${v?'':'z'}">${v}</td>`;
   const sum=k=>rows.reduce((s,r)=>s+r[k],0);
-  $('#statTbl').innerHTML=`<thead><tr><th>차번</th><th>기사</th><th>익착</th><th>당착</th><th>상차만</th><th>합계</th><th>나간 날</th><th>광진</th><th>기타</th><th>쉼</th></tr></thead><tbody>`+
+  $('#statTbl').innerHTML=`<thead><tr><th>차번</th><th>기사</th><th>익착</th><th>당착</th><th>상차만</th><th>합계</th><th>나간 날</th><th>광진</th><th>외부</th><th>쉼</th></tr></thead><tbody>`+
     rows.map(r=>`<tr><td>${esc(r.car)}</td><td>${esc(r.name)}</td>${td(r.unload)}${td(r.same)}${td(r.load)}<td class="sum">${r.total}</td>${td(r.days)}${td(r.kj)}${td(r.etc)}${td(r.rest)}</tr>`).join('')+
     `<tr class="tot"><td>합계</td><td>${rows.length}대</td><td>${sum('unload')}</td><td>${sum('same')}</td><td>${sum('load')}</td><td>${sum('total')}</td><td></td><td>${sum('kj')}</td><td>${sum('etc')}</td><td>${sum('rest')}</td></tr></tbody>`;
   $('#xlsBtn').disabled=!workDays;
@@ -1105,7 +1105,7 @@ $('#xlsBtn').onclick=async()=>{
     const x=new Date(i.day+'T00:00');
     det.push([i.day,WD[x.getDay()],GN[i.group]||'',KN[i.kind]||'',c,db.drivers[c]||'',i.kind==='unload'?'':(i.item||''),i.kind==='unload'?(i.place||''):(i.kind==='same'?(i.to||''):'')]);
   }));
-  const st=[['차번','기사','익착','당착','상차만','합계','나간 날','광진','기타','쉼']];
+  const st=[['차번','기사','익착','당착','상차만','합계','나간 날','광진','외부','쉼']];
   rows.forEach(r=>st.push([r.car,r.name,r.unload,r.same,r.load,r.total,r.days,r.kj,r.etc,r.rest]));
   const b=$('#xlsBtn'); b.textContent='만드는 중…';
   try{
@@ -1132,7 +1132,7 @@ $('#bkFile').addEventListener('change',e=>{
   r.readAsText(f);
 },true);
 
-// ===== 기타 오더 칸 =====
+// ===== 외부 오더 칸 =====
 const _render5=render;
 render=function(){
   _render5();
@@ -1140,7 +1140,7 @@ render=function(){
   fill('#l4a',g('unload'),'없음'); fill('#l4b',g('same'),'없음'); fill('#l4c',g('load'),'없음');
   $('#n-c4').textContent=`${nCars([...g('unload'),...g('same'),...g('load')])}대`;
 };
-GN.etc='기타';
+GN.etc='외부';
 
 render();
 </script>
