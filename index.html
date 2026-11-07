@@ -164,6 +164,19 @@ table.stat td:first-child{font-family:var(--f-mono);font-weight:600}
 table.stat tr.tot td{font-weight:700;border-top:2px solid var(--line)}
 table.stat td.z{color:var(--line)}
 table.stat td.sum{font-weight:700}
+.cal-day .rc{font-family:var(--f-body);font-size:10px;font-weight:700;color:var(--muted);border:1px dashed var(--line);border-radius:999px;padding:0 5px;white-space:nowrap}
+.cal-day.sel .rc{color:inherit}
+.cal.restmode .cal-day{cursor:copy}
+.cal-day.rsel{background:repeating-linear-gradient(135deg,var(--chip) 0 6px,var(--bg) 6px 12px);border-color:var(--muted)}
+.cal-day.rsel .d{text-decoration:line-through;opacity:.6}
+.cal-day.sel.rsel{background:var(--ink);color:var(--bg)}
+.cal-day.sel.rsel .d{opacity:1}
+.cal-day.rpart{border-style:dashed;border-color:var(--muted)}
+.restbar{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+#restMode{align-self:flex-start}
+#restMode[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.restpanel{display:flex;flex-direction:column;gap:8px}
+.restbtns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .holname{color:var(--c3);font-weight:700;font-size:14px}
 .cal-day .n{font-family:var(--f-body);font-size:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:0 6px;white-space:nowrap}
 @media (max-width:760px){.tabs{display:flex}.board{grid-template-columns:1fr}.col:not(.on){display:none}}
@@ -199,6 +212,14 @@ body{margin:0}
       <button id="mPrev" aria-label="지난달">◀</button>
       <div style="text-align:center"><strong id="mTitle"></strong><br><small>노란 숫자는 배차된 차 대수</small></div>
       <button id="mNext" aria-label="다음달">▶</button>
+    </div>
+    <div class="restbar">
+      <button type="button" id="restMode">휴차 지정</button>
+      <div class="restpanel" id="restPanel" hidden>
+        <p class="lnote" id="restMsg">휴차할 차를 고른 뒤 달력에서 날짜를 누르세요. 다시 누르면 풀려요.</p>
+        <div class="picker" id="restCars"></div>
+        <div class="restbtns"><button type="button" id="restClear">고른 차 지우기</button><button type="button" class="primary" id="restDone">다 했어요</button></div>
+      </div>
     </div>
     <button id="calFold" class="fold">달력 접기 ▲</button>
     <div class="cal-grid" id="calGrid"></div>
@@ -1141,6 +1162,59 @@ render=function(){
   $('#n-c4').textContent=`${nCars([...g('unload'),...g('same'),...g('load')])}대`;
 };
 GN.etc='외부';
+
+// ===== 달력에서 휴차 지정 =====
+let restOn=false; const restSel=new Set();
+function renderRestCars(){
+  const f=[...new Set(db.fleet||[])].sort();
+  $('#restCars').innerHTML=f.map(c=>`<button type="button" class="pick ${restSel.has(c)?'on':''}" data-rcar="${esc(c)}" aria-pressed="${restSel.has(c)}">${esc(c)}${dn(c)}</button>`).join('');
+  $('#restMsg').textContent=restSel.size
+    ?`${[...restSel].sort().join(', ')} 고름. 달력에서 쉬는 날짜를 누르세요. 다시 누르면 풀려요.`
+    :'휴차할 차를 고른 뒤 달력에서 날짜를 누르세요. 다시 누르면 풀려요.';
+}
+function setRest(on){
+  restOn=on; $('#restPanel').hidden=!on; $('#restMode').setAttribute('aria-pressed',on);
+  $('#cal').classList.toggle('restmode',on);
+  if(on)renderRestCars(); else restSel.clear();
+  renderCal();
+}
+$('#restMode').onclick=()=>setRest(!restOn);
+$('#restDone').onclick=()=>{setRest(false);render()};
+$('#restClear').onclick=()=>{restSel.clear();renderRestCars();renderCal()};
+$('#restCars').onclick=e=>{
+  const b=e.target.closest('[data-rcar]'); if(!b)return;
+  const c=b.dataset.rcar; restSel.has(c)?restSel.delete(c):restSel.add(c);
+  renderRestCars(); renderCal();
+};
+// 휴차 지정 중에는 날짜를 눌러도 그 날로 가지 않고 휴차만 바꿈
+$('#calGrid').addEventListener('click',e=>{
+  if(!restOn)return;
+  const b=e.target.closest('[data-day]'); if(!b)return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  if(!restSel.size){$('#restMsg').textContent='먼저 위에서 휴차할 차를 고르세요.';return}
+  const d=b.dataset.day, r=new Set(restOf(d)), all=[...restSel].every(c=>r.has(c));
+  restSel.forEach(c=>all?r.delete(c):r.add(c));
+  if(r.size)db.rest[d]=[...r].sort(); else delete db.rest[d];
+  save(); renderCal(); if(d===cur)renderIdle();
+},true);
+// 달력 칸에 휴차 대수, 고른 차가 쉬는 날은 빗금
+const _renderCal=renderCal;
+renderCal=function(){
+  _renderCal();
+  document.querySelectorAll('#calGrid [data-day]').forEach(b=>{
+    const r=restOf(b.dataset.day);
+    if(r.length){b.insertAdjacentHTML('beforeend',`<span class="rc">휴 ${r.length}</span>`);b.title=`휴차: ${r.map(c=>c+(db.drivers[c]?' '+db.drivers[c]:'')).join(', ')}`}
+    if(restOn&&restSel.size){
+      const n=[...restSel].filter(c=>r.includes(c)).length;
+      if(n===restSel.size)b.classList.add('rsel'); else if(n)b.classList.add('rpart');
+    }
+  });
+};
+// 달력을 접으면 휴차 지정도 끝
+const _setCal=setCal;
+setCal=function(open){if(!open&&restOn){restOn=false;$('#restPanel').hidden=true;$('#restMode').setAttribute('aria-pressed',false);$('#cal').classList.remove('restmode');restSel.clear()}_setCal(open);if(!open)render()};
+$('#calToggle').onclick=()=>setCal($('#cal').hidden);
+$('#calFold').onclick=()=>setCal(false);
 
 render();
 </script>
