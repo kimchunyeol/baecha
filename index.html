@@ -1168,7 +1168,7 @@ delete db.next;
 Object.defineProperty(db,'next',{enumerable:false,configurable:true,get(){return Date.now()*1000+Math.floor(Math.random()*1000)},set(){}});
 const FB_CFG={apiKey:"AIzaSyAtSMKAHlQbfD7bibYCFsnJjva33RXVJCQ",authDomain:"baecha-1443b.firebaseapp.com",projectId:"baecha-1443b",storageBucket:"baecha-1443b.firebasestorage.app",messagingSenderId:"1085284061678",appId:"1:1085284061678:web:3e7e9634e2258b9a14feff"};
 const FB_VER='10.14.1', BOARD='main';
-const Sync={on:false,fs:null,ref:null,last:{},lastSet:'',timer:null,unsub:[]};
+const Sync={on:false,fs:null,ref:null,last:{},lastSet:'',timer:null,unsub:[],from:'0000',oldLoaded:false,oldLoading:null};
 const dayJSON=d=>JSON.stringify({items:db.items.filter(i=>i.day===d),rest:restOf(d)});
 const setJSON=()=>JSON.stringify({fleet:db.fleet||[],drivers:db.drivers||{},hol:db.hol||{},fleetSeeded:db.fleetSeeded||0});
 function allDays(){return new Set([...db.items.map(i=>i.day),...Object.keys(db.rest||{})])}
@@ -1182,6 +1182,7 @@ function pushChanges(){
   const b=Sync.fs.batch(); let n=0;
   const days=new Set([...allDays(),...Object.keys(Sync.last)]);
   days.forEach(d=>{
+    if(d<Sync.from&&!Sync.oldLoaded)return; // 안 불러온 옛날 날짜는 건드리지 않음
     const j=dayJSON(d), was=Sync.last[d];
     const empty=!db.items.some(i=>i.day===d)&&!restOf(d).length;
     if(empty){if(was!==undefined){b.delete(Sync.ref.collection('days').doc(d));delete Sync.last[d];n++}}
@@ -1210,36 +1211,60 @@ function applySettings(s){
 }
 async function startSync(user){
   const fs=Sync.fs=firebase.firestore(); Sync.ref=fs.collection('boards').doc(BOARD);
+  const days=Sync.ref.collection('days'), ID=firebase.firestore.FieldPath.documentId();
+  Sync.from=addDays(today,-62); Sync.oldLoaded=false; Sync.oldLoading=null;
   syncState('busy','불러오는 중…');
+  const first=db.syncedTo!==FB_CFG.projectId;
   try{
-    const [sd,qs]=await Promise.all([Sync.ref.get(),Sync.ref.collection('days').get()]);
-    const remote={}; qs.forEach(doc=>remote[doc.id]=doc.data());
-    const first=db.syncedTo!==FB_CFG.projectId;
-    if(!sd.exists&&!qs.size){ /* 처음: 이 기기 배차를 그대로 올림 */ }
-    else{
-      // 같은 날은 인터넷 쪽이 우선. 이 기기에만 있는 날은 처음 연결 때만 올리고, 그 뒤엔 다른 기기에서 지운 것으로 봄
-      allDays().forEach(d=>{if(!(d in remote)&&!first){db.items=db.items.filter(i=>i.day!==d);delete db.rest[d]}});
-      Object.entries(remote).forEach(([d,data])=>applyDay(d,data));
-      if(sd.exists){const s=sd.data();
-        if(first){s.fleet=[...new Set([...(s.fleet||[]),...(db.fleet||[])])];s.drivers={...(db.drivers||{}),...(s.drivers||{})}}
-        applySettings(s); if(first)Sync.lastSet='';}
+    if(first){
+      // 이 기기 첫 연결: 한 번만 전체를 읽어서 합침 (같은 날은 인터넷 쪽 우선, 이 기기에만 있는 날은 올림)
+      const [sd,qs]=await Promise.all([Sync.ref.get(),days.get()]);
+      qs.forEach(doc=>applyDay(doc.id,doc.data()));
+      if(sd.exists){const s=sd.data();s.fleet=[...new Set([...(s.fleet||[]),...(db.fleet||[])])];s.drivers={...(db.drivers||{}),...(s.drivers||{})};applySettings(s)}
+      Sync.lastSet=''; Sync.oldLoaded=true;
     }
-    Object.keys(remote).forEach(d=>{if(d in remote&&Sync.last[d]===undefined)Sync.last[d]=JSON.stringify({items:remote[d].items||[],rest:remote[d].rest||[]})});
-    if(sd.exists&&!first)Sync.lastSet=JSON.stringify({fleet:sd.data().fleet||[],drivers:sd.data().drivers||{},hol:sd.data().hol||{},fleetSeeded:sd.data().fleetSeeded||0});
+    // 평소: 차량 목록과 최근 두 달 치만 계속 지켜봄
+    await new Promise((ok,no)=>{
+      let a=false,b=false; const done=()=>{if(a&&b)ok()};
+      Sync.unsub.push(Sync.ref.onSnapshot(doc=>{
+        if(doc.metadata.hasPendingWrites)return;
+        if(!a){a=true; if(!first){if(doc.exists)applySettings(doc.data());else Sync.lastSet=''} done(); return}
+        if(applySettings(doc.data())){_save();render()}
+      },no));
+      Sync.unsub.push(days.where(ID,'>=',Sync.from).onSnapshot(snap=>{
+        if(!b){
+          b=true;
+          if(!first){const ids=new Set(snap.docs.map(d=>d.id));
+            allDays().forEach(d=>{if(d>=Sync.from&&!ids.has(d)){db.items=db.items.filter(i=>i.day!==d);delete db.rest[d];delete Sync.last[d]}})}
+          snap.docs.forEach(doc=>{if(!doc.metadata.hasPendingWrites)applyDay(doc.id,doc.data())});
+          done(); return;
+        }
+        let ch=false; snap.docChanges().forEach(c=>{if(c.doc.metadata.hasPendingWrites)return;ch=applyDay(c.doc.id,c.type==='removed'?null:c.doc.data())||ch});
+        if(ch){_save();render()}
+      },err=>{if(!b)no(err);else syncState('off','연결 끊김')}));
+    });
     db.syncedTo=FB_CFG.projectId; Sync.on=true; _save(); render(); pushChanges();
     syncState('on','연동됨');
-    Sync.unsub.push(Sync.ref.collection('days').onSnapshot(snap=>{
-      let ch=false; snap.docChanges().forEach(c=>{if(c.doc.metadata.hasPendingWrites)return;ch=applyDay(c.doc.id,c.type==='removed'?null:c.doc.data())||ch});
-      if(ch){_save();render()}
-    },err=>syncState('off','연결 끊김')));
-    Sync.unsub.push(Sync.ref.onSnapshot(doc=>{if(doc.metadata.hasPendingWrites)return;if(applySettings(doc.data())){_save();render()}}));
   }catch(err){
-    console.error(err); Sync.on=false;
+    console.error(err); stopSync();
     if(err&&err.code==='permission-denied')showGate('이 계정은 배차판을 쓸 수 없어요. 허락된 구글 계정으로 다시 로그인하세요.');
     else syncState('off','연결 안 됨');
   }
 }
-function stopSync(){Sync.unsub.forEach(u=>{try{u()}catch(e){}});Sync.unsub=[];Sync.on=false;Sync.last={};Sync.lastSet=''}
+// 두 달보다 오래된 기록은 필요할 때 한 번만 불러옴
+function loadOld(){
+  if(!Sync.on||Sync.oldLoaded)return Promise.resolve();
+  if(Sync.oldLoading)return Sync.oldLoading;
+  syncState('busy','지난 기록 불러오는 중…');
+  const ID=firebase.firestore.FieldPath.documentId();
+  Sync.oldLoading=Sync.ref.collection('days').where(ID,'<',Sync.from).get().then(qs=>{
+    const ids=new Set(); qs.forEach(doc=>{ids.add(doc.id);applyDay(doc.id,doc.data())});
+    allDays().forEach(d=>{if(d<Sync.from&&!ids.has(d)){db.items=db.items.filter(i=>i.day!==d);delete db.rest[d]}});
+    Sync.oldLoaded=true; _save(); render(); syncState('on','연동됨');
+  }).catch(err=>{console.error(err);syncState('off','지난 기록 못 불러옴')}).finally(()=>{Sync.oldLoading=null});
+  return Sync.oldLoading;
+}
+function stopSync(){Sync.unsub.forEach(u=>{try{u()}catch(e){}});Sync.unsub=[];Sync.on=false;Sync.last={};Sync.lastSet='';Sync.oldLoaded=false;Sync.oldLoading=null}
 function showGate(err){$('#gate').hidden=false;$('#gateErr').hidden=!err;$('#gateErr').textContent=err||''}
 function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
 let localOnly=false; try{localOnly=localStorage.getItem('baecha-local')==='1'}catch(e){}
@@ -1268,6 +1293,13 @@ let localOnly=false; try{localOnly=localStorage.getItem('baecha-local')==='1'}ca
   $('#gLocal').onclick=()=>{localOnly=true;try{localStorage.setItem('baecha-local','1')}catch(e){};$('#gate').hidden=true;syncState('off','이 기기에만 저장');$('#logout').textContent='로그인'};
   $('#logout').onclick=()=>{ if(auth.currentUser){stopSync();auth.signOut()} else {localOnly=false;try{localStorage.removeItem('baecha-local')}catch(e){};showGate()} };
 })();
+
+// 예전 날짜를 볼 때만 지난 기록 불러오기
+$('#openLog').addEventListener('click',()=>loadOld().then(()=>{runFind();if(!$('#p-stat').hidden)renderStat()}));
+const _render6=render;
+render=function(){_render6();if(Sync.on&&!Sync.oldLoaded&&(cur<Sync.from||calMonth<Sync.from.slice(0,7)))loadOld()};
+$('#mPrev').addEventListener('click',()=>{if(Sync.on&&!Sync.oldLoaded&&calMonth<Sync.from.slice(0,7))loadOld()});
+$('#loadDate').addEventListener('input',()=>{const d=$('#loadDate').value;if(Sync.on&&!Sync.oldLoaded&&d&&d<Sync.from)loadOld().then(loadPreview)});
 
 render();
 </script>
