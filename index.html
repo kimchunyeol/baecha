@@ -232,20 +232,20 @@ body{margin:0}
   </div>
 
   <div class="tabs" role="tablist">
-    <button data-tab="c1" aria-selected="true">유니드 익착</button>
-    <button data-tab="c2" aria-selected="false">유니드 당착</button>
+    <button data-tab="c1" aria-selected="false">유니드 익착</button>
+    <button data-tab="c2" aria-selected="true">유니드 당착</button>
     <button data-tab="c3" aria-selected="false">광진</button>
     <button data-tab="c4" aria-selected="false">외부</button>
   </div>
 
   <div class="board">
-    <section class="col on" id="c1" style="--k:var(--c1)">
+    <section class="col" id="c1" style="--k:var(--c1)">
       <div class="col-head"><div><h2>익착</h2><small>유니드 · 어제 상차 → 오늘 하차</small></div><span class="count" id="n-c1"></span></div>
       <div class="list" id="l1"></div>
       <button class="add" data-add="unid:unload">+ 익착 추가</button>
     </section>
 
-    <section class="col" id="c2" style="--k:var(--c2)">
+    <section class="col on" id="c2" style="--k:var(--c2)">
       <div class="col-head"><div><h2>당착 · 상차만</h2><small>유니드 · 오늘 싣고 오늘 내림</small></div><span class="count" id="n-c2"></span></div>
       <div class="sub">당착</div>
       <div class="list" id="l2a"></div>
