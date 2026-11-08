@@ -172,6 +172,20 @@ table.stat td.sum{font-weight:700}
 #restMode[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .restpanel{display:flex;flex-direction:column;gap:8px}
 .restbtns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap}
+.sync .dot{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.sync.on .dot{background:var(--c2)}
+.sync.busy .dot{background:var(--accent)}
+.sync.off .dot{background:var(--c3)}
+.sync button{padding:4px 8px;font-size:12px}
+.gate{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;align-items:center;justify-content:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.gate .gbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:28px 24px;max-width:420px;width:100%;display:flex;flex-direction:column;gap:14px;text-align:center}
+.gate h2{font-family:var(--f-display);font-weight:400;font-size:30px;margin:0}
+.gate p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+.gate .gbtn{font-size:16px;padding:12px;font-weight:700}
+.gate .gerr{color:var(--c3);font-weight:700}
+.gate .glocal{background:none;border:none;color:var(--muted);text-decoration:underline;font-size:13px}
 .holname{color:var(--c3);font-weight:700;font-size:14px}
 .cal-day .n{font-family:var(--f-body);font-size:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:0 6px;white-space:nowrap}
 @media (max-width:760px){.tabs{display:flex}.board{grid-template-columns:1fr}.col:not(.on){display:none}}
@@ -194,6 +208,7 @@ body{margin:0}
       <span class="holname" id="holName"></span>
     </div>
     <div class="tools">
+      <span class="sync" id="sync" hidden><span class="dot"></span><span id="syncTxt"></span><button type="button" id="logout">로그아웃</button></span>
       <button id="openLog">기록·통계</button>
       <button id="openCopy" class="primary">글 미리보기</button>
     </div>
@@ -321,6 +336,17 @@ body{margin:0}
       <div class="tblwrap"><table class="stat" id="statTbl"></table></div>
     </div>
     <div class="btns"><button type="button" data-close>닫기</button></div>
+  </div>
+</div>
+
+<!-- 로그인 -->
+<div class="gate" id="gate" hidden>
+  <div class="gbox">
+    <h2>배차판</h2>
+    <p id="gateMsg">사무실·집·휴대폰에서 같은 배차판을 쓰려면 구글 계정으로 로그인하세요.</p>
+    <p class="gerr" id="gateErr" hidden></p>
+    <button type="button" class="primary gbtn" id="gLogin">구글로 로그인</button>
+    <button type="button" class="glocal" id="gLocal">로그인 없이 이 기기에서만 쓰기</button>
   </div>
 </div>
 
@@ -1135,6 +1161,113 @@ renderCal=function(){
 const _setCal=setCal;
 setCal=function(open){if(!open&&restOn){restOn=false;$('#restPanel').hidden=true;$('#restMode').setAttribute('aria-pressed',false);$('#cal').classList.remove('restmode');restSel.clear()}_setCal(open);if(!open)render()};
 $('#calToggle').onclick=()=>setCal($('#cal').hidden);
+
+// ===== 여러 기기 연동 (Firebase) =====
+// 배차 번호는 기기마다 겹치지 않게 시간+난수로
+delete db.next;
+Object.defineProperty(db,'next',{enumerable:false,configurable:true,get(){return Date.now()*1000+Math.floor(Math.random()*1000)},set(){}});
+const FB_CFG={apiKey:"AIzaSyAtSMKAHlQbfD7bibYCFsnJjva33RXVJCQ",authDomain:"baecha-1443b.firebaseapp.com",projectId:"baecha-1443b",storageBucket:"baecha-1443b.firebasestorage.app",messagingSenderId:"1085284061678",appId:"1:1085284061678:web:3e7e9634e2258b9a14feff"};
+const FB_VER='10.14.1', BOARD='main';
+const Sync={on:false,fs:null,ref:null,last:{},lastSet:'',timer:null,unsub:[]};
+const dayJSON=d=>JSON.stringify({items:db.items.filter(i=>i.day===d),rest:restOf(d)});
+const setJSON=()=>JSON.stringify({fleet:db.fleet||[],drivers:db.drivers||{},hol:db.hol||{},fleetSeeded:db.fleetSeeded||0});
+function allDays(){return new Set([...db.items.map(i=>i.day),...Object.keys(db.rest||{})])}
+function syncState(cls,txt){const s=$('#sync');s.hidden=false;s.className='sync '+cls;$('#syncTxt').textContent=txt}
+
+// 저장할 때마다 바뀐 날짜만 올림
+const _save=save;
+save=function(){_save();if(Sync.on){clearTimeout(Sync.timer);Sync.timer=setTimeout(pushChanges,400)}};
+function pushChanges(){
+  if(!Sync.on)return;
+  const b=Sync.fs.batch(); let n=0;
+  const days=new Set([...allDays(),...Object.keys(Sync.last)]);
+  days.forEach(d=>{
+    const j=dayJSON(d), was=Sync.last[d];
+    const empty=!db.items.some(i=>i.day===d)&&!restOf(d).length;
+    if(empty){if(was!==undefined){b.delete(Sync.ref.collection('days').doc(d));delete Sync.last[d];n++}}
+    else if(j!==was){b.set(Sync.ref.collection('days').doc(d),JSON.parse(j));Sync.last[d]=j;n++}
+  });
+  const sj=setJSON(); if(sj!==Sync.lastSet){b.set(Sync.ref,JSON.parse(sj));Sync.lastSet=sj;n++}
+  if(!n)return;
+  syncState('busy','저장 중…');
+  b.commit().then(()=>syncState('on','연동됨')).catch(err=>{syncState('off','저장 안 됨');console.error(err);
+    if(err&&err.code==='permission-denied')showGate('이 계정은 배차판을 쓸 수 없어요. 허락된 구글 계정으로 다시 로그인하세요.')});
+}
+// 다른 기기에서 바뀐 것 받기
+function applyDay(d,data){
+  const j=data?JSON.stringify({items:data.items||[],rest:data.rest||[]}):undefined;
+  if(j!==undefined&&j===dayJSON(d)){Sync.last[d]=j;return false}
+  db.items=db.items.filter(i=>i.day!==d);
+  if(data){(data.items||[]).forEach(i=>db.items.push({...i,day:d}));if((data.rest||[]).length)db.rest[d]=[...data.rest];else delete db.rest[d];Sync.last[d]=j}
+  else{delete db.rest[d];delete Sync.last[d]}
+  return true;
+}
+function applySettings(s){
+  if(!s)return false;
+  const j=JSON.stringify({fleet:s.fleet||[],drivers:s.drivers||{},hol:s.hol||{},fleetSeeded:s.fleetSeeded||0});
+  Sync.lastSet=j; if(j===setJSON())return false;
+  db.fleet=s.fleet||[];db.drivers=s.drivers||{};db.hol=s.hol||{};db.fleetSeeded=s.fleetSeeded||db.fleetSeeded;return true;
+}
+async function startSync(user){
+  const fs=Sync.fs=firebase.firestore(); Sync.ref=fs.collection('boards').doc(BOARD);
+  syncState('busy','불러오는 중…');
+  try{
+    const [sd,qs]=await Promise.all([Sync.ref.get(),Sync.ref.collection('days').get()]);
+    const remote={}; qs.forEach(doc=>remote[doc.id]=doc.data());
+    const first=db.syncedTo!==FB_CFG.projectId;
+    if(!sd.exists&&!qs.size){ /* 처음: 이 기기 배차를 그대로 올림 */ }
+    else{
+      // 같은 날은 인터넷 쪽이 우선. 이 기기에만 있는 날은 처음 연결 때만 올리고, 그 뒤엔 다른 기기에서 지운 것으로 봄
+      allDays().forEach(d=>{if(!(d in remote)&&!first){db.items=db.items.filter(i=>i.day!==d);delete db.rest[d]}});
+      Object.entries(remote).forEach(([d,data])=>applyDay(d,data));
+      if(sd.exists){const s=sd.data();
+        if(first){s.fleet=[...new Set([...(s.fleet||[]),...(db.fleet||[])])];s.drivers={...(db.drivers||{}),...(s.drivers||{})}}
+        applySettings(s); if(first)Sync.lastSet='';}
+    }
+    Object.keys(remote).forEach(d=>{if(d in remote&&Sync.last[d]===undefined)Sync.last[d]=JSON.stringify({items:remote[d].items||[],rest:remote[d].rest||[]})});
+    if(sd.exists&&!first)Sync.lastSet=JSON.stringify({fleet:sd.data().fleet||[],drivers:sd.data().drivers||{},hol:sd.data().hol||{},fleetSeeded:sd.data().fleetSeeded||0});
+    db.syncedTo=FB_CFG.projectId; Sync.on=true; _save(); render(); pushChanges();
+    syncState('on','연동됨');
+    Sync.unsub.push(Sync.ref.collection('days').onSnapshot(snap=>{
+      let ch=false; snap.docChanges().forEach(c=>{if(c.doc.metadata.hasPendingWrites)return;ch=applyDay(c.doc.id,c.type==='removed'?null:c.doc.data())||ch});
+      if(ch){_save();render()}
+    },err=>syncState('off','연결 끊김')));
+    Sync.unsub.push(Sync.ref.onSnapshot(doc=>{if(doc.metadata.hasPendingWrites)return;if(applySettings(doc.data())){_save();render()}}));
+  }catch(err){
+    console.error(err); Sync.on=false;
+    if(err&&err.code==='permission-denied')showGate('이 계정은 배차판을 쓸 수 없어요. 허락된 구글 계정으로 다시 로그인하세요.');
+    else syncState('off','연결 안 됨');
+  }
+}
+function stopSync(){Sync.unsub.forEach(u=>{try{u()}catch(e){}});Sync.unsub=[];Sync.on=false;Sync.last={};Sync.lastSet=''}
+function showGate(err){$('#gate').hidden=false;$('#gateErr').hidden=!err;$('#gateErr').textContent=err||''}
+function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
+let localOnly=false; try{localOnly=localStorage.getItem('baecha-local')==='1'}catch(e){}
+(async()=>{
+  try{
+    const u=`https://www.gstatic.com/firebasejs/${FB_VER}/`;
+    await loadScript(u+'firebase-app-compat.js');
+    await Promise.all([loadScript(u+'firebase-auth-compat.js'),loadScript(u+'firebase-firestore-compat.js')]);
+  }catch(e){ if(!localOnly)syncState('off','연동 안 됨 · 이 기기에만 저장'); return }
+  firebase.initializeApp(FB_CFG);
+  try{await firebase.firestore().enablePersistence({synchronizeTabs:true})}catch(e){}
+  const auth=firebase.auth();
+  auth.getRedirectResult().catch(err=>showGate('로그인에 실패했어요. 다시 눌러 주세요.'));
+  auth.onAuthStateChanged(user=>{
+    stopSync();
+    if(user){$('#gate').hidden=true;localOnly=false;try{localStorage.removeItem('baecha-local')}catch(e){}
+      $('#logout').title=user.email||'';$('#logout').textContent='로그아웃'; startSync(user)}
+    else if(localOnly){syncState('off','이 기기에만 저장');$('#logout').textContent='로그인'}
+    else showGate();
+  });
+  $('#gLogin').onclick=async()=>{
+    const p=new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({prompt:'select_account'});
+    try{await auth.signInWithPopup(p)}
+    catch(err){ if(err&&/popup|operation-not-supported/.test(err.code||''))auth.signInWithRedirect(p); else showGate('로그인에 실패했어요. 다시 눌러 주세요.') }
+  };
+  $('#gLocal').onclick=()=>{localOnly=true;try{localStorage.setItem('baecha-local','1')}catch(e){};$('#gate').hidden=true;syncState('off','이 기기에만 저장');$('#logout').textContent='로그인'};
+  $('#logout').onclick=()=>{ if(auth.currentUser){stopSync();auth.signOut()} else {localOnly=false;try{localStorage.removeItem('baecha-local')}catch(e){};showGate()} };
+})();
 
 render();
 </script>
