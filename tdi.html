@@ -199,7 +199,6 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
           <div class="row" id="coNames"></div>
           <div class="row">
             <label class="field"><span>마지막 조</span><select id="lastMode"></select></label>
-            <label class="field" style="justify-content:end"><span><input type="checkbox" id="jeo"> 2조에 저순도 자리</span></label>
           </div>
         </div>
       </details>
@@ -225,8 +224,11 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
     <section class="panel sec" aria-label="순번표">
       <div class="head">
         <p class="label">순번표</p>
-        <div class="legend" id="legend"></div>
+        <label style="font-size:14px;font-weight:500"><input type="checkbox" id="jeo"> 오늘 저순도 있음 (2조)</label>
       </div>
+      <div class="legend" id="legend">
+      </div>
+      <p class="hint" id="jeoHint"></p>
       <div class="board" id="board"></div>
     </section>
 
@@ -550,6 +552,7 @@ function renderLive(){
     b+=`<div class="slot${s>=last?" off":""}${over?" over":""}"><span class="no">${s+1}조</span><span class="tm">${s===13?"17:00~30":TIMES[s]}</span><span class="cars">${cars.join("")}</span></div>`;
   }
   $("board").innerHTML=b;
+  $("jeoHint").textContent=st.jeo?"2조는 차 1대 + 저순도예요.":"저순도 없음: 2조도 차 2대가 들어가는 일반 조예요.";
   $("out").textContent=kakao(A);
   $("formula").textContent=`도착 = 조 시간 + 상차 ${st.load}분 + 운전시간 + 휴게 ${st.rest}분`+(st.restMode==="per2h"?" (2시간마다)":"");
   renderHist(A);
