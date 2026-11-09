@@ -131,9 +131,9 @@ textarea.mono{font-family:var(--f-mono);font-size:14px;line-height:1.5}
 .pick.rest{opacity:.4;text-decoration:line-through}
 .ichip{border:none;font-family:var(--f-mono);font-weight:600;font-size:14px;background:var(--chip);border-radius:4px;padding:1px 6px;color:var(--ink);text-align:center}
 .ichip .dn{display:inline;margin-left:3px}
-.ichip.rest{background:transparent;border:1px dashed var(--line);color:var(--muted);text-decoration:line-through}
+.ichip.rest{background:transparent;border:1px dashed var(--line);color:var(--muted);opacity:.75;text-decoration:line-through;text-decoration-thickness:2px}
 .isep{flex-basis:100%;height:0}
-.idle .rs{color:var(--muted)}
+.idle .rs{color:var(--muted);font-size:13px;margin-right:4px}
 .sheet .box.wide{max-width:780px}
 .ltabs{display:flex;gap:6px}
 .ltabs button{flex:1;font-weight:700}
@@ -907,11 +907,13 @@ function renderIdle(){
   const el=$('#idle');
   el.classList.toggle('all',!idle.length);
   const chip=(c,cls)=>`<span class="car ichip ${cls}">${esc(c)}${dn(c)}</span>`;
+  // 휴차는 따로 묶지 않고 번호 순서 그대로, 줄 긋고 회색으로
+  const all=fleet.filter(c=>!used.has(c));
   el.innerHTML=(idle.length
-    ?`<strong>안 나간 차 ${idle.length}대</strong>${idle.map(c=>chip(c,'')).join('')}`
+    ?`<strong>안 나간 차 ${idle.length}대</strong>`
     :`<strong>${fleet.length-rest.length}대 모두 배차됐어요</strong>`)
-    +(rest.length?`<span class="isep"></span><strong class="rs">쉬는 차 ${rest.length}대</strong>${rest.map(c=>chip(c,'rest')).join('')}`:'')
-;
+    +(rest.length?`<span class="rs">휴차 ${rest.length}대</span>`:'')
+    +all.map(c=>chip(c,rest.includes(c)?'rest':'')).join('');
 }
 const _render4=render;
 render=function(){_render4();renderIdle()};
