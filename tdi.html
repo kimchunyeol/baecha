@@ -108,6 +108,13 @@ summary{cursor:pointer;font-weight:500;font-size:14px}
 .drow.th{font-size:12px;color:var(--muted)}
 .drow input[type=checkbox]{justify-self:center}
 .drow button{padding:6px 0}
+.notes{display:grid;gap:6px}
+.nrow{display:grid;grid-template-columns:24px minmax(0,1fr) 34px 34px;gap:6px;align-items:start}
+.nrow input[type=checkbox]{margin-top:9px;justify-self:center}
+.nrow textarea{font-size:14px;padding:6px 8px;resize:none;overflow:hidden;line-height:1.5}
+.nrow.offn textarea{color:var(--muted);background:transparent}
+.nrow button{padding:6px 0}
+.nrow button:disabled{opacity:.35;cursor:default}
 .formula{font-size:13px;background:var(--bg);border-radius:8px;padding:8px 10px;color:var(--muted)}
 /* 기록 표 */
 .tablebox{overflow-x:auto}
@@ -233,7 +240,11 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
         <button type="button" class="primary big" id="copy">카톡용 복사</button>
         <span class="toast" id="toast" role="status"></span>
       </div>
-      <label class="field"><span>맨 아래 안내 문구</span><input id="note" placeholder="예: ☆점심시간 없이 연속 상차☆"></label>
+      <div class="sec" style="gap:8px">
+        <div class="head"><p class="label">참고사항 · 체크한 것만 카톡 글에 붙어요</p><button type="button" class="small" id="addNote">문구 추가</button></div>
+        <div class="notes" id="notes"></div>
+        <label class="field"><span>오늘만 붙일 문구</span><input id="note" placeholder="예: 내일은 후문 공사로 정문만 사용"></label>
+      </div>
     </section>
 
     <section class="panel sec" aria-label="회사별 기록">
@@ -301,6 +312,16 @@ if(!st||!Array.isArray(st.reqs)){
   st.dests.forEach(d=>{if(d.name==="창대.익산"&&d.drive==null)d.drive=120});
 }
 {const NM=["한정특수","한익스","혜성","비봉"];st.cos=st.cos.map((c,k)=>/^예시[BCD]$/.test(c)?NM[k]:c);}
+const DEF_NOTES=[
+  "☆점심시간 없이 연속 상차☆",
+  "☆한타임에 평균 50분 예상\n당일 염산 나오는 속도에 따라 입차 시간이 2분~5분씩 늘어지거나 당겨질 수 있으니 10분 전에 미리 대기☆",
+  "☆2조 저순도는 8시5분~20분쯤 출차 예상☆",
+  "☆마지막 입차는 20시 30분까지\n입차하셔야 상차 가능합니다☆",
+  "☆후문출입 12시30분에 후문개방\n근무자 지시에 따라 12시 10분 이후에 후문출입\n\n7조는 후문출입 정문출차, 8조는 정문출입 후문출차 예상됩니다\n당일 시간에 따라 변동되니 확실치 않습니다☆",
+  "☆14조는 근무자 전화받고 입차 (17시~17시30분)☆",
+  "☆13조나 14조는 정확한 입차시간 아님☆"];
+if(!Array.isArray(st.notes)){st.notes=DEF_NOTES.map(t=>({text:t,on:false}));
+  const k=st.notes.findIndex(n=>n.text===(st.note||"").trim());if(k>=0){st.notes[k].on=true;st.note=""}}
 if(!st.sample&&(!st.date||st.date<dayStr(1)))st.date=dayStr(1);
 let hist={};try{hist=JSON.parse(localStorage.getItem(HKEY))||{}}catch(e){hist={}}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
@@ -412,6 +433,7 @@ function kakao(A){
     const mv=st.reqs.map((r,i)=>[r,A.res[i]]).filter(([r,x])=>x.status==="moved"||(x.status==="none"&&r.want));
     if(mv.length){L.push("","☆순번 조정☆");mv.forEach(([r,x])=>L.push(x.status==="moved"?`${r.no} ${r.want}조 → ${x.slot+1}조 (${x.reason})`:`${r.no} ${r.want}조 요청 → 자리 없음 (${x.reason})`))}
   }
+  st.notes.filter(n=>n.on&&n.text.trim()).forEach(n=>L.push("",n.text.trim()));
   if((st.note||"").trim())L.push("",st.note.trim());
   return L.join("\n");
 }
@@ -456,6 +478,16 @@ function buildReqs(){
   $("reqCount").textContent=st.reqs.filter(r=>r.no).length;
 }
 
+function buildNotes(){
+  $("notes").innerHTML=st.notes.map((n,k)=>`<div class="nrow${n.on?"":" offn"}" id="nrow${k}">
+    <input type="checkbox" id="non${k}" aria-label="참고사항 ${k+1} 카톡 글에 붙이기"${n.on?" checked":""}>
+    <textarea id="ntx${k}" rows="1" aria-label="참고사항 ${k+1}">${esc(n.text)}</textarea>
+    <button type="button" class="small" data-nup="${k}" aria-label="위로 올리기"${k?"":" disabled"}>↑</button>
+    <button type="button" class="small" data-ndel="${k}" aria-label="참고사항 ${k+1} 지우기">✕</button></div>`).join("")||`<p class="hint">"문구 추가"로 자주 쓰는 안내를 넣어 두세요.</p>`;
+  requestAnimationFrame(()=>document.querySelectorAll(".nrow textarea").forEach(fit));
+}
+function fit(t){t.style.height="auto";t.style.height=(t.scrollHeight+2)+"px"}
+addEventListener("resize",()=>document.querySelectorAll(".nrow textarea").forEach(fit));
 function buildDests(){
   $("dtab").innerHTML=`<div class="drow th"><span>거래처</span><span>운전시간</span><span>기본 마감</span><span>연장</span><span></span></div>`+
   st.dests.map((d,n)=>`<div class="drow">
@@ -591,6 +623,9 @@ document.addEventListener("input",e=>{
     if(k==="no")$("reqCount").textContent=st.reqs.filter(x=>x.no).length;
     st.sample=false;renderLive();return;
   }
+  if(m=id.match(/^n(on|tx)(\d+)$/)){const n=st.notes[+m[2]];if(!n)return;
+    if(m[1]==="on"){n.on=t.checked;$("nrow"+m[2]).classList.toggle("offn",!n.on)}else{n.text=t.value;fit(t)}
+    renderLive();return}
   if(["date","am","day","pm","note","cutoff"].includes(id)){st[id]=t.value;renderLive();return}
   if(id==="lastMode"){st.lastMode=t.value;renderLive();return}
   if(id==="jeo"||id==="showReasons"){st[id]=t.checked;renderLive();return}
@@ -612,6 +647,10 @@ document.addEventListener("click",e=>{
   if(del){st.reqs=st.reqs.filter(r=>r.id!==+del.dataset.del);buildReqs();renderLive();return}
   const dd=e.target.closest("[data-ddel]");
   if(dd){st.dests.splice(+dd.dataset.ddel,1);buildDests();renderLive();return}
+  const nu=e.target.closest("[data-nup]");
+  if(nu){const k=+nu.dataset.nup;if(k>0){[st.notes[k-1],st.notes[k]]=[st.notes[k],st.notes[k-1]];buildNotes();renderLive()}return}
+  const nd=e.target.closest("[data-ndel]");
+  if(nd){st.notes.splice(+nd.dataset.ndel,1);buildNotes();renderLive();return}
   const day=e.target.closest("[data-day]");
   if(day){st.date=dayStr(+day.dataset.day);$("date").value=st.date;renderLive()}
 });
@@ -631,13 +670,14 @@ $("addPaste").onclick=()=>{
 };
 $("clearPaste").onclick=()=>{$("paste").value="";$("paste").focus()};
 $("clearSample").onclick=()=>{st.reqs=[];st.sample=false;st.date=dayStr(1);st.am=st.day=st.pm="";fillTop();buildReqs();renderLive()};
+$("addNote").onclick=()=>{st.notes.push({text:"",on:true});buildNotes();renderLive();$("ntx"+(st.notes.length-1)).focus()};
 $("addDest").onclick=()=>{st.dests.push({name:"",drive:null,due:"",soft:false});buildDests();$("dn"+(st.dests.length-1)).focus()};
 $("copy").onclick=()=>copyText(kakao(assign()),"복사됨 · 카톡에 붙여넣기 하세요");
 $("copyRules").onclick=()=>copyText(rulesText(),"기준 글 복사됨 · 단톡방에 공유해 보세요");
 $("saveDay").onclick=()=>{if(!st.date){toast("날짜를 먼저 넣어 주세요");return}
   hist[st.date]=dayStats(assign());saveHist();renderLive();toast(`${dateText(st.date)} 기록 저장`)};
 
-buildStatic();fillTop();buildDests();buildReqs();bindReqBtns();renderLive();
+buildStatic();fillTop();buildNotes();buildDests();buildReqs();bindReqBtns();renderLive();
 </script>
 </body>
 </html>
