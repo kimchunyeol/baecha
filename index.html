@@ -186,6 +186,12 @@ table.stat td.sum{font-weight:700}
 .gate .gbtn{font-size:16px;padding:12px;font-weight:700}
 .gate .gerr{color:var(--c3);font-weight:700}
 .gate .glocal{background:none;border:none;color:var(--muted);text-decoration:underline;font-size:13px}
+.restban{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;background:var(--panel);border:2px solid var(--c3);border-radius:10px;padding:10px 14px;font-size:15px}
+.restban strong{color:var(--c3);font-size:16px}
+.restban .rcar{font-family:var(--f-mono);font-weight:600;background:var(--chip);border-radius:4px;padding:2px 8px}
+.restban .rcar s{text-decoration-color:var(--c3);text-decoration-thickness:2px}
+.restban .rcar small{font-family:var(--f-body);font-weight:400;margin-left:5px;color:var(--ink)}
+.restban .rnote{color:var(--muted);font-size:13px}
 .holname{color:var(--c3);font-weight:700;font-size:14px}
 .cal-day .n{font-family:var(--f-body);font-size:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:0 6px;white-space:nowrap}
 @media (max-width:760px){.tabs{display:flex}.board{grid-template-columns:1fr}.col:not(.on){display:none}}
@@ -213,6 +219,8 @@ body{margin:0}
       <button id="openCopy" class="primary">글 미리보기</button>
     </div>
   </header>
+
+  <div class="restban" id="restBan" hidden></div>
 
   <div class="cal" id="cal">
     <div class="cal-head">
@@ -1314,6 +1322,19 @@ const _render6=render;
 render=function(){_render6();if(Sync.on&&!Sync.oldLoaded&&(cur<Sync.from||calMonth<Sync.from.slice(0,7)))loadOld()};
 $('#mPrev').addEventListener('click',()=>{if(Sync.on&&!Sync.oldLoaded&&calMonth<Sync.from.slice(0,7))loadOld()});
 $('#loadDate').addEventListener('input',()=>{const d=$('#loadDate').value;if(Sync.on&&!Sync.oldLoaded&&d&&d<Sync.from)loadOld().then(loadPreview)});
+
+// 맨 위 휴차 안내
+function renderRestBan(){
+  const r=restOf(cur), el=$('#restBan');
+  el.hidden=!r.length; if(!r.length)return;
+  const x=new Date(cur+'T00:00'), n=Math.round((x-new Date(today+'T00:00'))/86400000);
+  const when=n===0?'오늘':n===1?'내일':n===2?'모레':`${x.getMonth()+1}/${x.getDate()}(${WD[x.getDay()]})`;
+  el.innerHTML=`<strong>${when}은 ${r.length}대 휴차입니다</strong>${r.map(c=>`<span class="rcar"><s>${esc(c)}</s>${db.drivers&&db.drivers[c]?`<small>${esc(db.drivers[c])}</small>`:''}</span>`).join('')}<span class="rnote">(휴무 신청 차)</span>`;
+}
+const _render7=render;
+render=function(){_render7();renderRestBan()};
+const _renderCal2=renderCal;
+renderCal=function(){_renderCal2();renderRestBan()};
 
 render();
 </script>
