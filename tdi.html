@@ -72,16 +72,15 @@ button.big{padding:11px 18px;font-size:16px}
 .req{display:grid;grid-template-columns:28px 84px minmax(0,1fr) minmax(0,1fr) 32px;gap:6px;padding:8px;border:1px solid var(--line);border-radius:10px;align-items:center}
 .req .ord{grid-row:span 3;align-self:stretch;display:grid;place-items:start center;padding-top:7px;font-size:12px;font-weight:700;font-family:var(--mono);
   color:var(--co);border-right:3px solid var(--co);margin-right:2px}
-.req .drv{grid-column:2 / 3} .req .dest{grid-column:3 / 4} .req .due{grid-column:4 / 6}
+.req .drv{grid-column:2 / 4} .req .flags{grid-column:4 / 6}
 @media (max-width:520px){
   .req{grid-template-columns:24px minmax(0,1fr) minmax(0,1fr) 34px}
-  .req .ord{grid-row:1 / 6}
+  .req .ord{grid-row:1 / 5}
   .req .no{grid-column:2;grid-row:1} .req .co{grid-column:3;grid-row:1} .req .del{grid-column:4;grid-row:1}
   .req .want{grid-column:2;grid-row:2} .req .drv{grid-column:3 / 5;grid-row:2}
-  .req .dest{grid-column:2;grid-row:3} .req .due{grid-column:3 / 5;grid-row:3}
-  .req .flags{grid-column:2 / 5;grid-row:4} .req .res{grid-column:2 / 5;grid-row:5}
+  .req .flags{grid-column:2 / 5;grid-row:3} .req .res{grid-column:2 / 5;grid-row:4}
 }
-.req .flags{grid-column:2 / 6;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:13px}
+.req .flags{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:13px}
 .req .flags label{display:inline-flex;gap:5px;align-items:center;color:var(--muted)}
 .req .res{grid-column:2 / 6;font-size:13px}
 .req .res small{color:var(--muted)}
@@ -167,8 +166,8 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
         <label class="field" style="flex:0 1 180px"><span>어느 회사 글인가요?</span><select id="pasteCo"></select></label>
         <button type="button" class="primary" id="addPaste">요청 목록에 넣기</button>
       </div>
-      <textarea id="paste" rows="6" placeholder="5조 2636&#10;8조 9405. 4746&#10;3611 / 금성 13시&#10;5278 / KCC대죽"></textarea>
-      <p class="hint">"5조 2636", "2636 5조", "8조 : 9405. 4746"은 원하는 조로, "3611 / 금성 13시"는 하차지와 마감으로, "3611 / 5조 / 4시간 / 17시"처럼 쓰면 조·운전시간·마감까지 읽어요. 붙여넣은 순서가 곧 "먼저 올린 순서"입니다.</p>
+      <textarea id="paste" rows="6" placeholder="5조 2636&#10;8조 9405. 4746&#10;3611 / 3조 / 5시간&#10;5278 / 4시간30분"></textarea>
+      <p class="hint">"5조 2636", "2636 5조", "8조 : 9405. 4746"은 신청 조로 읽어요. "3611 / 3조 / 5시간"처럼 쓰면 걸리는 시간까지 읽어요. 붙여넣은 순서가 곧 "먼저 올린 순서"입니다.</p>
     </section>
 
     <section class="panel sec" aria-label="요청 목록">
@@ -180,7 +179,7 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
         </div>
       </div>
       <div class="reqs" id="reqs"></div>
-      <p class="hint">원하는 조를 바꾸거나 <b>고정</b>에 체크하면 순번표가 바로 다시 짜여요. 요청 마감 뒤에 올라온 요청은 <b>늦게 올림</b>에 체크하세요.</p>
+      <p class="hint">신청 조나 걸리는 시간을 바꾸거나 <b>고정</b>에 체크하면 순번표가 바로 다시 짜여요. 요청 마감 뒤에 올라온 요청은 <b>늦게 올림</b>에 체크하세요.</p>
     </section>
 
     <section class="panel sec" aria-label="순번 기준">
@@ -190,29 +189,24 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
       </div>
       <ol class="rules">
         <li><b>고정한 차</b><small>담당자가 직접 정한 자리. 무엇보다 먼저 들어가요.</small></li>
-        <li><b>하차 마감이 있는 차</b><small>늦으면 못 내리는 차. 마감에 맞는 조를 먼저 받아요.</small></li>
-        <li><b>원하는 조 요청</b><small>같은 조가 꽉 차면
+        <li><b>신청한 조</b><small>같은 조가 꽉 차면
           <select id="rule" style="width:auto;padding:2px 6px;font-size:13px">
             <option value="first">먼저 올린 차</option>
+            <option value="far">걸리는 시간이 긴 차</option>
             <option value="fair">이번 달 많이 밀린 회사</option>
           </select> 우선. 밀린 차는 가장 가까운 빈 조로 가요.</small></li>
         <li><b>늦게 올린 요청</b><small>요청 마감 뒤에 올린 차는 남은 칸으로.</small></li>
-        <li><b>조 상관없는 차</b><small>마감이 있으면 맞는 가장 늦은 조, 없으면 가장 이른 빈 조.</small></li>
+        <li><b>조 상관없는 차</b><small>걸리는 시간이 긴 차부터 이른 빈 조로.</small></li>
       </ol>
       <label class="field"><span>요청 마감 (단톡방에 같이 알릴 문구)</span><input id="cutoff" placeholder="예: 전날 18시까지"></label>
 
       <details>
-        <summary>순번표 설정 · 회사 이름</summary>
+        <summary>순번표 설정 · 회사 이름 · 도착 계산</summary>
         <div class="sec" style="margin-top:10px">
           <div class="row" id="coNames"></div>
           <div class="row">
             <label class="field"><span>마지막 조</span><select id="lastMode"></select></label>
           </div>
-        </div>
-      </details>
-      <details>
-        <summary>거래처 운전시간 · 계산 설정</summary>
-        <div class="sec" style="margin-top:10px">
           <div class="formula" id="formula"></div>
           <div class="row">
             <label class="field"><span>상차 걸리는 시간 (분)</span><input id="load" type="number" min="0" step="5"></label>
@@ -220,9 +214,7 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
             <label class="field"><span>휴게 넣는 방식</span>
               <select id="restMode"><option value="once">한 번만</option><option value="per2h">2시간 운전마다</option></select></label>
           </div>
-          <div class="dtab" id="dtab"></div>
-          <div class="btns"><button type="button" class="small" id="addDest">거래처 추가</button></div>
-          <p class="hint">운전시간은 "4:30", "4시간30분", "4.5" 모두 됩니다. 기본 마감은 요청에 시간이 없을 때 쓰는 하차 마감이에요. 연장에 체크하면 마감을 넘겨도 넣을 수 있어요.</p>
+          <p class="hint">도착 시간은 보기용이고, 같은 차가 두 탕 돌 때 돌아오는 시간 계산에도 써요.</p>
         </div>
       </details>
     </section>
@@ -275,7 +267,7 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
 <script>
 const TIMES=["06:20","07:40","08:05","08:55","09:45","10:35","11:25","12:15","13:05","13:55","14:45","15:35","16:25","17:00","18:10","19:00","19:50","20:30"];
 const N=TIMES.length;
-const KEY="tdi-baecha-v2",OLDKEY="tdi-baecha-v1",HKEY="tdi-baecha-hist";
+const KEY="tdi-baecha-v2",HKEY="tdi-baecha-hist";
 const WD=["일","월","화","수","목","금","토"];
 const toMin=s=>{const[h,m]=s.split(":").map(Number);return h*60+m};
 const START=TIMES.map(toMin);
@@ -294,19 +286,15 @@ const norm=s=>(s||"").replace(/[\s.·]/g,"").toLowerCase();
 function dayStr(add){const t=new Date();t.setDate(t.getDate()+add);return `${t.getFullYear()}-${p2(t.getMonth()+1)}-${p2(t.getDate())}`}
 const $=id=>document.getElementById(id);
 
-const DEF_DESTS=[
-  {name:"금성",drive:300,due:"",soft:false},{name:"한수",drive:240,due:"",soft:false},{name:"창대.익산",drive:120,due:"",soft:false},
-  {name:"KCC대죽",drive:270,due:"17:00",soft:true},{name:"삼주당진",drive:240,due:"",soft:false},{name:"광진화학당진",drive:240,due:"",soft:false}];
-
 function sample(){
   const R=[];let id=1;
-  const add=(no,co,want,dest="",due="")=>R.push({id:id++,no,co,want,dest,due,pin:false,late:false});
+  const add=(no,co,want,drive=null)=>R.push({id:id++,no,co,want,drive,pin:false,late:false});
   add("2531",1,1);add("1537",1,2);add("3047",1,4);add("2636",1,5);
   add("7622",2,6);add("9405",2,8);add("4746",2,8);add("7489",2,9);
   add("2551",3,10);add("1537",1,12);add("6442",3,12);add("9400",3,13);add("2531",1,16);add("5312",3,17);
-  add("3611",0,null,"금성","13:00");add("4649",0,null,"한수","13:00");add("4693",0,null,"금성","18:00");
-  add("5273",0,null,"삼주당진");add("5278",0,null,"KCC대죽");add("7497",0,null,"KCC대죽");add("7587",0,null,"삼주당진");
-  add("7600",0,null,"창대.익산");add("7600",0,null,"금성","22:00");add("5294",0,null,"광진화학당진");
+  add("3611",0,null,300);add("4649",0,null,240);add("4693",0,null,300);
+  add("5273",0,null,240);add("5278",0,null,270);add("7497",0,null,270);add("7587",0,null,240);
+  add("7600",0,null,120);add("7600",0,null,300);add("5294",0,null,240);
   return {reqs:R,seq:id};
 }
 
@@ -316,12 +304,17 @@ try{st=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 if(!st||!Array.isArray(st.reqs)){
   const s=sample();
   st={date:"2026-10-29",am:"덕원",day:"민성",pm:"용준",note:"☆점심시간 없이 연속 상차☆",cutoff:"",lastMode:"auto",jeo:true,showReasons:true,rule:"first",
-    load:50,rest:20,restMode:"once",dests:structuredClone(DEF_DESTS),cos:["한정특수","한익스","혜성","비봉"],reqs:s.reqs,seq:s.seq,pasteCo:0,sample:true};
-  try{const o=JSON.parse(localStorage.getItem(OLDKEY));
-    if(o){if(Array.isArray(o.dests)&&o.dests.length)st.dests=o.dests;["load","rest","restMode"].forEach(k=>{if(o[k]!=null)st[k]=o[k]})}}catch(e){}
-  st.dests.forEach(d=>{if(d.name==="창대.익산"&&d.drive==null)d.drive=120});
+    load:50,rest:20,restMode:"once",cos:["한정특수","한익스","혜성","비봉"],reqs:s.reqs,seq:s.seq,pasteCo:0,sample:true};
 }
 {const NM=["한정특수","한익스","혜성","비봉"];st.cos=st.cos.map((c,k)=>/^예시[BCD]$/.test(c)?NM[k]:c);}
+// 예전 버전(거래처 표)에서 넘어온 경우: 거래처 운전시간을 차마다 옮기고 거래처 정보는 정리
+if(Array.isArray(st.dests)){
+  const find=n=>{n=norm(n);if(!n)return null;return st.dests.find(d=>norm(d.name)===n)||st.dests.find(d=>norm(d.name)&&(norm(d.name).includes(n)||n.includes(norm(d.name))))};
+  st.reqs.forEach(r=>{if(r.drive==null&&r.dest){const d=find(r.dest);if(d&&d.drive!=null)r.drive=d.drive}});
+  delete st.dests;
+}
+st.reqs.forEach(r=>{delete r.dest;delete r.due;if(r.drive===undefined)r.drive=null});
+if(!["first","far","fair"].includes(st.rule))st.rule="first";
 const DEF_NOTES=[
   "☆점심시간 없이 연속 상차☆",
   "☆한타임에 평균 50분 예상\n당일 염산 나오는 속도에 따라 입차 시간이 2분~5분씩 늘어지거나 당겨질 수 있으니 10분 전에 미리 대기☆",
@@ -340,7 +333,6 @@ const coName=k=>st.cos[k]||`회사${k+1}`;
 
 /* ---------- 계산 ---------- */
 const restOf=d=>d==null||d<=0?0:(st.restMode==="per2h"?Math.floor(d/120)*st.rest:st.rest);
-function findDest(name){const n=norm(name);if(!n)return null;return st.dests.find(d=>norm(d.name)===n)||st.dests.find(d=>norm(d.name)&&(norm(d.name).includes(n)||n.includes(norm(d.name))))||null}
 const arrive=(s,d)=>START[s]+st.load+d+restOf(d);
 function monthMoved(){
   const ym=(st.date||"").slice(0,7),m=[0,0,0,0];
@@ -353,43 +345,37 @@ function assign(){
   const cap=s=>2-(s===1&&st.jeo?1:0);
   const occ=Array.from({length:N},()=>[]);
   const res=R.map(()=>({slot:null,status:"none",reason:""}));
-  const info=R.map(r=>{const D=findDest(r.dest);const due=r.due?toMin(r.due):(D&&D.due?toMin(D.due):null);
-    return {d:r.drive!=null?r.drive:(D?D.drive:null),due,soft:!!(D&&D.soft),w:r.want?r.want-1:null}});
+  const info=R.map(r=>({d:r.drive??null,w:r.want?r.want-1:null}));
   const prev=R.map((r,i)=>{for(let j=i-1;j>=0;j--)if(R[j].no&&R[j].no===r.no)return j;return -1});
   const mm=monthMoved();
-  const grp=R.map((r,i)=>{const f=info[i];
-    if(r.pin&&f.w!=null)return 0;
-    if(f.due!=null&&!f.soft&&f.d!=null)return 1;
-    return f.w!=null?2:3});
-  const fits=(i,s)=>{const f=info[i];return !(f.due!=null&&f.d!=null&&!f.soft&&arrive(s,f.d)>f.due)};
-  const within=(i,s)=>{const f=info[i];return f.due==null||f.d==null||arrive(s,f.d)<=f.due};
+  const grp=R.map((r,i)=>r.pin&&info[i].w!=null?0:info[i].w!=null?2:3);
   const free=s=>occ[s].length<cap(s);
+  // 같은 차 두 번째 탕: 첫 탕 상차 + 왕복 + 휴게 뒤에만
   const es=i=>{const j=prev[i];if(j<0)return -Infinity;const p=res[j].slot;if(p==null)return null;
     const d=info[j].d;return d==null?START[p]+1:START[p]+st.load+2*d+2*restOf(d)};
   const done=new Set();
   const idx=[...Array(n).keys()].filter(i=>R[i].no);
   const demand=s=>idx.filter(i=>!done.has(i)&&info[i].w===s).length;
   const cmp=(a,b)=>{for(let k=0;k<a.length;k++)if(a[k]!==b[k])return a[k]-b[k];return 0};
-  const feas=i=>{let c=0;for(let s=0;s<N;s++)if(fits(i,s))c++;return c};
-  const G=[0,1,2,3].map(g=>idx.filter(i=>grp[i]===g));
-  G[1].sort((a,b)=>cmp([feas(a),info[a].due,a],[feas(b),info[b].due,b]));
-  const k2=i=>st.rule==="fair"?[R[i].late?1:0,-(mm[R[i].co]||0),i]:[R[i].late?1:0,i];
-  G[2].sort((a,b)=>cmp(k2(a),k2(b)));
-  const hasNext=i=>prev.some(j=>j===i)?0:1; // 두 탕 도는 차의 첫 탕은 먼저 (다음 탕 시간 확보)
-  G[3].sort((a,b)=>cmp([R[a].late?1:0,hasNext(a),info[a].due??1e9,a],[R[b].late?1:0,hasNext(b),info[b].due??1e9,b]));
+  const G=[0,2,3].map(g=>idx.filter(i=>grp[i]===g));
+  const k2=i=>{const late=R[i].late?1:0;
+    if(st.rule==="far")return [late,-(info[i].d||0),i];
+    if(st.rule==="fair")return [late,-(mm[R[i].co]||0),i];
+    return [late,i]};
+  G[1].sort((a,b)=>cmp(k2(a),k2(b)));
+  const hasNext=i=>prev.some(j=>j===i)?0:1; // 두 탕 도는 차의 첫 탕은 먼저
+  G[2].sort((a,b)=>cmp([R[a].late?1:0,hasNext(a),-(info[a].d||0),a],[R[b].late?1:0,hasNext(b),-(info[b].d||0),b]));
   const put=(i,s)=>{occ[s].push(i);res[i].slot=s;done.add(i)};
   const firstFrom=e=>{for(let s=0;s<N;s++)if(START[s]>=e)return s+1;return N};
 
   function whyNot(i,w,e){
-    const f=info[i];
     if(START[w]<e)return `두 번째 탕이라 ${firstFrom(e)}조부터 가능`;
-    if(!fits(i,w))return `${w+1}조는 하차 마감 ${fmt(f.due)}에 늦음`;
     const js=occ[w];
     const pin=js.find(j=>grp[j]===0);if(pin!=null)return `${w+1}조에 고정 차(${R[pin].no})`;
-    const hd=js.find(j=>grp[j]===1);if(hd!=null)return `하차 마감 차(${R[hd].no}) 우선`;
     if(R[i].late)return "늦게 올린 요청이라 남은 칸으로";
     const o=js.find(j=>grp[j]===2);
     if(o!=null){
+      if(st.rule==="far"&&(info[o].d||0)>(info[i].d||0))return `더 먼 ${R[o].no}(${fmtDur(info[o].d)}) 우선`;
       if(st.rule==="fair"&&(mm[R[o].co]||0)>(mm[R[i].co]||0))return `이번 달 더 많이 밀린 ${coName(R[o].co)} 우선`;
       return `먼저 올린 ${R[o].no} 우선`;
     }
@@ -401,7 +387,7 @@ function assign(){
     const f=info[i],e=es(i);
     if(e===null)return false;
     if(grp[i]===0){put(i,f.w);res[i].status="pin";if(occ[f.w].length>cap(f.w))res[i].reason="칸이 넘침";return true}
-    const cand=[];for(let s=0;s<N;s++)if(START[s]>=e&&free(s)&&fits(i,s))cand.push(s);
+    const cand=[];for(let s=0;s<N;s++)if(START[s]>=e&&free(s))cand.push(s);
     if(f.w!=null){
       if(cand.includes(f.w)){put(i,f.w);res[i].status="ok";return true}
       res[i].reason=whyNot(i,f.w,e);
@@ -409,18 +395,14 @@ function assign(){
       cand.sort((a,b)=>Math.abs(a-f.w)-Math.abs(b-f.w)||b-a);
       put(i,cand[0]);res[i].status="moved";return true;
     }
-    if(!cand.length){res[i].status="none";res[i].reason=f.due!=null?"하차 마감에 맞는 빈 조가 없어요":"빈 조가 없어요";done.add(i);return true}
-    const spare=s=>occ[s].length+demand(s)<cap(s);
-    if(f.due!=null&&f.d!=null){
-      const inT=cand.filter(s=>within(i,s));
-      if(inT.length){const sp=inT.filter(spare);put(i,(sp.length?sp:inT).at(-1));res[i].status="auto";res[i].reason=`하차 마감 ${fmt(f.due)}에 맞춘 가장 늦은 조`;return true}
-      const sp=cand.filter(spare);put(i,(sp.length?sp:cand)[0]);res[i].status="auto";res[i].reason="마감 안 자리가 없어 연장";return true;
-    }
-    const sp=cand.filter(spare);put(i,(sp.length?sp:cand)[0]);res[i].status="auto";
-    res[i].reason=e>-Infinity?"두 번째 탕, 가능한 가장 이른 조":"빈 조 중 가장 이른 조";return true;
+    if(!cand.length){res[i].status="none";res[i].reason="빈 조가 없어요";done.add(i);return true}
+    const sp=cand.filter(s=>occ[s].length+demand(s)<cap(s));
+    put(i,(sp.length?sp:cand)[0]);res[i].status="auto";
+    res[i].reason=e>-Infinity?"두 번째 탕, 가능한 가장 이른 조":f.d!=null?"걸리는 시간 긴 차부터 이른 조":"빈 조 중 가장 이른 조";
+    return true;
   }
 
-  let queue=[...G[0],...G[1],...G[2],...G[3]];
+  let queue=[...G[0],...G[1],...G[2]];
   for(let pass=0;pass<5&&queue.length;pass++){
     const next=[];for(const i of queue)if(!placeOne(i))next.push(i);
     if(next.length===queue.length){next.forEach(i=>{res[i].status="none";res[i].reason="첫 탕 자리가 없어요"});break}
@@ -449,13 +431,12 @@ function kakao(A){
 }
 
 function rulesText(){
-  const r3=st.rule==="fair"?"이번 달 많이 밀린 회사":"먼저 올린 차";
+  const r2={first:"먼저 올린 차",far:"걸리는 시간이 긴 차",fair:"이번 달 많이 밀린 회사"}[st.rule];
   return ["☆TDI 순번 기준☆",
     "1. 담당자가 고정한 차",
-    "2. 하차 마감이 있는 차 (마감에 맞는 조 먼저)",
-    `3. 원하는 조 요청 (같은 조가 차면 ${r3} 우선, 밀린 차는 가장 가까운 빈 조)`,
-    "4. 요청 마감 뒤에 올린 요청은 남은 칸",
-    "5. 조 상관없는 차는 남은 빈 조",
+    `2. 신청한 조 (같은 조가 차면 ${r2} 우선, 밀린 차는 가장 가까운 빈 조)`,
+    "3. 요청 마감 뒤에 올린 요청은 남은 칸",
+    "4. 조 상관없는 차는 걸리는 시간이 긴 차부터 이른 빈 조",
     ...(st.cutoff?[`요청 마감 : ${st.cutoff}`]:[])].join("\n");
 }
 
@@ -467,7 +448,7 @@ function dayStats(A){
 
 /* ---------- 화면 만들기 ---------- */
 function coOptions(sel){return st.cos.map((c,k)=>`<option value="${k}"${k===sel?" selected":""}>${esc(c)}</option>`).join("")}
-function wantOptions(sel){let h=`<option value="">조 상관없음</option>`;for(let s=1;s<=N;s++)h+=`<option value="${s}"${s===sel?" selected":""}>${s}조 ${TIMES[s-1]}</option>`;return h}
+function wantOptions(sel){let h=`<option value="">아무 조</option>`;for(let s=1;s<=N;s++)h+=`<option value="${s}"${s===sel?" selected":""}>${s}조 ${TIMES[s-1]}</option>`;return h}
 
 function buildReqs(){
   $("reqs").innerHTML=st.reqs.map((r,k)=>`
@@ -475,11 +456,9 @@ function buildReqs(){
       <span class="ord" id="r${r.id}ord">${k+1}</span>
       <input class="mono no" id="r${r.id}no" aria-label="차번" placeholder="차번" maxlength="8" value="${esc(r.no)}">
       <select class="co" id="r${r.id}co" aria-label="회사">${coOptions(r.co)}</select>
-      <select class="want" id="r${r.id}want" aria-label="원하는 조">${wantOptions(r.want)}</select>
+      <select class="want" id="r${r.id}want" aria-label="신청한 조">${wantOptions(r.want)}</select>
       <button type="button" class="small del" data-del="${r.id}" aria-label="${esc(r.no)} 지우기">✕</button>
-      <input class="drv mono" id="r${r.id}drive" aria-label="운전시간" placeholder="운전시간 4:30" value="${esc(fmtDur(r.drive))}">
-      <input class="dest" id="r${r.id}dest" aria-label="하차지" placeholder="하차지" value="${esc(r.dest)}">
-      <input class="due" type="time" id="r${r.id}due" aria-label="하차 마감" value="${esc(r.due)}">
+      <input class="drv mono" id="r${r.id}drive" aria-label="걸리는 시간" placeholder="걸리는 시간 예: 4:30" value="${esc(fmtDur(r.drive))}">
       <div class="flags">
         <label><input type="checkbox" id="r${r.id}pin"${r.pin?" checked":""}> 고정</label>
         <label><input type="checkbox" id="r${r.id}late"${r.late?" checked":""}> 늦게 올림</label>
@@ -499,15 +478,6 @@ function buildNotes(){
 }
 function fit(t){t.style.height="auto";t.style.height=(t.scrollHeight+2)+"px"}
 addEventListener("resize",()=>document.querySelectorAll(".nrow textarea").forEach(fit));
-function buildDests(){
-  $("dtab").innerHTML=`<div class="drow th"><span>거래처</span><span>운전시간</span><span>기본 마감</span><span>연장</span><span></span></div>`+
-  st.dests.map((d,n)=>`<div class="drow">
-    <input id="dn${n}" aria-label="거래처 이름" value="${esc(d.name)}">
-    <input id="dd${n}" aria-label="${esc(d.name)} 운전시간" placeholder="예: 4:30" value="${esc(fmtDur(d.drive))}">
-    <input id="du${n}" type="time" aria-label="${esc(d.name)} 기본 마감" value="${esc(d.due||"")}">
-    <input id="ds${n}" type="checkbox" aria-label="${esc(d.name)} 마감 연장 가능"${d.soft?" checked":""}>
-    <button type="button" class="small" data-ddel="${n}" aria-label="${esc(d.name)} 삭제">✕</button></div>`).join("");
-}
 
 function buildStatic(){
   $("pasteCo").innerHTML=coOptions(+st.pasteCo||0);
@@ -524,37 +494,26 @@ function fillTop(){
   $("sampleBanner").hidden=!st.sample;
 }
 
-function arrivalHtml(A,i){
-  const x=A.res[i],f=A.info[i];if(x.slot==null)return"";
-  if(f.d==null)return (f.due!=null||st.reqs[i].dest)&&st.reqs[i].dest?` · <span class="late">운전시간 없음</span>`:"";
-  const a=arrive(x.slot,f.d);let h=` · ${fmt(a)} 도착`;
-  if(f.due!=null&&a>f.due)h+=f.soft?` <span class="mv">연장 ${a-f.due}분</span>`:` <span class="late">${a-f.due}분 늦음</span>`;
-  else if(f.due!=null)h+=` <span class="okc">✓</span>`;
-  return h;
-}
-
 function renderLive(){
   const A=assign();
-  // 요청별 결과
   st.reqs.forEach((r,i)=>{
-    const el=$(`r${r.id}res`);if(!el)return;const x=A.res[i];
+    const el=$(`r${r.id}res`);if(!el)return;const x=A.res[i],f=A.info[i];
     if(!r.no){el.innerHTML=`<small>차번을 넣어 주세요</small>`;return}
     let h;
-    if(x.status==="ok")h=`<b class="okc">${x.slot+1}조 ✓</b> <small>요청대로</small>`;
+    if(x.status==="ok")h=`<b class="okc">${x.slot+1}조 ✓</b> <small>신청대로</small>`;
     else if(x.status==="pin")h=`<b>${x.slot+1}조 고정</b>`+(x.reason?` <span class="late">${x.reason}</span>`:"");
     else if(x.status==="moved")h=`<b class="mv">${r.want}조 → ${x.slot+1}조</b> <small>${esc(x.reason)}</small>`;
     else if(x.status==="auto")h=`<b>${x.slot+1}조</b> <small>${esc(x.reason)}</small>`;
     else h=`<b class="late">자리 없음</b> <small>${esc(x.reason)}</small>`;
-    el.innerHTML=h+arrivalHtml(A,i);
+    if(x.slot!=null&&f.d!=null)h+=` · ${fmt(arrive(x.slot,f.d))} 도착 예상`;
+    el.innerHTML=h;
   });
-  // 순번표
   const last=lastSlot(A);let b="";
   for(let s=0;s<N;s++){
     if(s===13)b+=`<div class="divider">저녁시간</div>`;
     const cars=A.occ[s].map(i=>{const r=st.reqs[i],x=A.res[i],f=A.info[i];
       const mk=x.status==="moved"?`<span class="mk">↪${r.want}조</span>`:x.status==="pin"?`<span class="mk">고정</span>`:"";
-      let sm=r.dest?esc(r.dest):"";
-      if(f.d!=null){const a=arrive(s,f.d);sm+=` → ${fmt(a)}`;if(f.due!=null&&a>f.due)sm=`<span class="${f.soft?"mv":"late"}">${sm}</span>`}
+      const sm=f.d!=null?`${fmtDur(f.d)} → ${fmt(arrive(s,f.d))}`:"";
       return `<span class="car"><span class="chip c${r.co}" title="${esc(coName(r.co))}">${esc(r.no)}${mk}</span>${sm?`<small>${sm}</small>`:""}</span>`});
     if(s===1&&st.jeo)cars.push(`<span class="car"><span class="chip jeo">저순도</span></span>`);
     const over=A.occ[s].length>A.cap(s);
@@ -563,7 +522,7 @@ function renderLive(){
   $("board").innerHTML=b;
   $("jeoHint").textContent=st.jeo?"2조는 차 1대 + 저순도예요.":"저순도 없음: 2조도 차 2대가 들어가는 일반 조예요.";
   $("out").textContent=kakao(A);
-  $("formula").textContent=`도착 = 조 시간 + 상차 ${st.load}분 + 운전시간 + 휴게 ${st.rest}분`+(st.restMode==="per2h"?" (2시간마다)":"");
+  $("formula").textContent=`도착 예상 = 조 시간 + 상차 ${st.load}분 + 걸리는 시간 + 휴게 ${st.rest}분`+(st.restMode==="per2h"?" (2시간마다)":"");
   renderHist(A);
   save();
   return A;
@@ -579,30 +538,26 @@ function renderHist(A){
   $("histMonth").textContent=ym?`${+ym.slice(5)}월`:"";
   const saved=!!hist[st.date];
   $("saveDay").textContent=saved?"다시 확정":"이 날 배차 확정";
-  $("histHint").textContent=`확정한 날 ${days}일 기준이에요.`+(saved?" 이 날짜는 이미 확정돼 있어요.":" 카톡에 올린 뒤 '확정'을 누르면 이 날 결과가 기록돼요.")+" 기록은 이 컴퓨터 브라우저에 저장됩니다.";
+  $("histHint").textContent=`확정한 날 ${days}일 기준이에요.`+(saved?" 이 날짜는 이미 확정돼 있어요.":" 카톡에 올린 뒤 '확정'을 누르면 이 날 결과가 기록돼요.")+" 기록은 이 휴대폰 브라우저에 저장됩니다.";
 }
 
 /* ---------- 붙여넣기 읽기 ---------- */
+function driveIn(line){const t=line.match(/(\d+(?:\.\d+)?)\s*시간(?:\s*(\d+)\s*분)?/);return t?Math.round(+t[1]*60)+(+t[2]||0):null}
 function parsePaste(text){
   const out=[];let date=null;
   for(const raw of (text||"").split(/\r?\n/)){
     const line=raw.trim();if(!line)continue;let m;
     if(m=line.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/)){date=[+m[1],+m[2]];continue}
     if(!/^\d{3,}/.test(line)&&(m=line.match(/(\d{1,2})\s*\/\s*(\d{1,2})/))&&!/조/.test(line)){date=[+m[1],+m[2]];continue}
+    const drive=driveIn(line);
     if(m=line.match(/^(\d{1,2})\s*조\s*[:：]?\s*(.*)$/)){
       const w=+m[1];if(w<1||w>N)continue;
-      (m[2].match(/\d{4}/g)||[]).forEach(no=>out.push({no,want:w,dest:"",due:""}));continue}
+      (m[2].replace(/(\d+(?:\.\d+)?)\s*시간(?:\s*\d+\s*분)?/,"").match(/\d{4}/g)||[]).forEach(no=>out.push({no,want:w,drive}));continue}
     if(m=line.match(/^([0-9A-Za-z가-힣]+)\s*\/\s*(.+)$/)){
-      let rest=m[2].trim(),due="",t,want=null;
-      let drive=null;
-      if(t=rest.match(/(\d+(?:\.\d+)?)\s*시간(?:\s*(\d+)\s*분)?/)){drive=Math.round(+t[1]*60)+(+t[2]||0);rest=rest.replace(t[0],"").replace(/\/\s*$|^\s*\//g,"").trim()}
-      if(t=rest.match(/(\d{1,2})\s*조/)){want=+t[1];rest=rest.replace(t[0],"").trim()}
-      if(t=rest.match(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?\s*$/)){due=`${p2(+t[1])}:${p2(+t[2]||0)}`;rest=rest.slice(0,t.index).trim()}
-      else if(t=rest.match(/(\d{1,2}):(\d{2})\s*$/)){due=`${p2(+t[1])}:${t[2]}`;rest=rest.slice(0,t.index).trim()}
-      rest=rest.replace(/^[\s\/]+|[\s\/]+$/g,"");
-      out.push({no:m[1],want:want&&want<=N?want:null,dest:rest,due,drive});continue}
-    if(m=line.match(/^(\d{4})\D+?(\d{1,2})\s*조/)){if(+m[2]<=N)out.push({no:m[1],want:+m[2],dest:"",due:""});continue}
-    if(m=line.match(/^(\d{4})\.?$/)){out.push({no:m[1],want:null,dest:"",due:""});continue}
+      const t=m[2].match(/(\d{1,2})\s*조/);const w=t?+t[1]:null;
+      out.push({no:m[1],want:w&&w<=N?w:null,drive});continue}
+    if(m=line.match(/^(\d{4})\D+?(\d{1,2})\s*조/)){if(+m[2]<=N)out.push({no:m[1],want:+m[2],drive});continue}
+    if(m=line.match(/^(\d{4})\.?(?:\s|$)/)){out.push({no:m[1],want:null,drive});continue}
   }
   return {items:out,date};
 }
@@ -615,7 +570,6 @@ function copyText(t,okMsg){
     if(ok)toast(okMsg);else{const r=document.createRange();r.selectNodeContents($("out"));const s=getSelection();s.removeAllRanges();s.addRange(r);toast("글이 선택됐어요. 길게 눌러 복사하세요")}};
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toast(okMsg),fb);else fb();
 }
-function addDestIfNew(name){if(name&&!findDest(name)){st.dests.push({name,drive:null,due:"",soft:false});buildDests();return true}return false}
 function askIn(areaId,msg,yesLabel,onYes){
   const area=$(areaId),old=area.innerHTML;
   area.innerHTML=`<div class="confirm"><span>${msg}</span><button type="button" id="cfYes">${yesLabel}</button><button type="button" id="cfNo">취소</button></div>`;
@@ -623,13 +577,13 @@ function askIn(areaId,msg,yesLabel,onYes){
   $("cfYes").onclick=()=>{onYes();back()};$("cfNo").onclick=back;
 }
 function bindReqBtns(){
-  $("addOne").onclick=()=>{st.reqs.push({id:st.seq++,no:"",co:+$("pasteCo").value||0,want:null,dest:"",due:"",pin:false,late:false});buildReqs();renderLive();$(`r${st.seq-1}no`).focus()};
+  $("addOne").onclick=()=>{st.reqs.push({id:st.seq++,no:"",co:+$("pasteCo").value||0,want:null,drive:null,pin:false,late:false});buildReqs();renderLive();$(`r${st.seq-1}no`).focus()};
   $("clearReqs").onclick=()=>askIn("reqBtns","요청을 모두 지울까요?","모두 지우기",()=>{st.reqs=[];buildReqs();renderLive()});
 }
 
 document.addEventListener("input",e=>{
   const t=e.target,id=t.id;let m;
-  if(m=id.match(/^r(\d+)(no|co|want|dest|due|drive|pin|late)$/)){
+  if(m=id.match(/^r(\d+)(no|co|want|drive|pin|late)$/)){
     const r=st.reqs.find(x=>x.id===+m[1]);if(!r)return;const k=m[2];
     if(k==="pin"||k==="late")r[k]=t.checked;
     else if(k==="co"){r.co=+t.value;$(`row${r.id}`).className=`req c${r.co}`}
@@ -650,19 +604,13 @@ document.addEventListener("input",e=>{
   if(id==="load"||id==="rest"){st[id]=Math.max(0,+t.value||0);renderLive();return}
   if(id==="restMode"){st.restMode=t.value;renderLive();return}
   if(m=id.match(/^coName(\d)$/)){st.cos[+m[1]]=t.value.trim()||`회사${+m[1]+1}`;
-    document.querySelectorAll('select[id$="co"]').forEach(s=>{const v=+s.value;s.innerHTML=coOptions(v)});
+    document.querySelectorAll('select.co,#pasteCo').forEach(s=>{const v=+s.value;s.innerHTML=coOptions(v)});
     $("legend").innerHTML=st.cos.map((c,k)=>`<span class="chip c${k}" style="font-family:var(--sans);font-size:12px">${esc(c)}</span>`).join("");
     renderLive();return}
-  if(m=id.match(/^d([ndus])(\d+)$/)){const d=st.dests[+m[2]];if(!d)return;
-    if(m[1]==="n")d.name=t.value.trim();else if(m[1]==="d")d.drive=parseDur(t.value);else if(m[1]==="u")d.due=t.value;else d.soft=t.checked;
-    renderLive();return}
 });
-document.addEventListener("change",e=>{const m=e.target.id.match(/^r(\d+)dest$/);if(m&&addDestIfNew(e.target.value.trim()))renderLive()});
 document.addEventListener("click",e=>{
   const del=e.target.closest("[data-del]");
   if(del){st.reqs=st.reqs.filter(r=>r.id!==+del.dataset.del);buildReqs();renderLive();return}
-  const dd=e.target.closest("[data-ddel]");
-  if(dd){st.dests.splice(+dd.dataset.ddel,1);buildDests();renderLive();return}
   const nu=e.target.closest("[data-nup]");
   if(nu){const k=+nu.dataset.nup;if(k>0){[st.notes[k-1],st.notes[k]]=[st.notes[k],st.notes[k-1]];buildNotes();renderLive()}return}
   const nd=e.target.closest("[data-ndel]");
@@ -676,9 +624,8 @@ $("addPaste").onclick=()=>{
   if(st.sample){st.reqs=[];st.sample=false}
   let added=0,skip=0;
   for(const it of items){
-    if(st.reqs.some(r=>r.no===it.no&&r.co===co&&r.want===it.want&&r.dest===it.dest&&r.due===it.due)){skip++;continue}
-    st.reqs.push({id:st.seq++,no:it.no,co,want:it.want,dest:it.dest,due:it.due,drive:it.drive??null,pin:false,late:false});added++;
-    addDestIfNew(it.dest);
+    if(st.reqs.some(r=>r.no===it.no&&r.co===co&&r.want===it.want&&r.drive===it.drive)){skip++;continue}
+    st.reqs.push({id:st.seq++,no:it.no,co,want:it.want,drive:it.drive,pin:false,late:false});added++;
   }
   if(date){const y=(st.date||"").slice(0,4)||String(new Date().getFullYear());st.date=`${y}-${p2(date[0])}-${p2(date[1])}`}
   $("paste").value="";fillTop();buildReqs();renderLive();
@@ -687,13 +634,12 @@ $("addPaste").onclick=()=>{
 $("clearPaste").onclick=()=>{$("paste").value="";$("paste").focus()};
 $("clearSample").onclick=()=>{st.reqs=[];st.sample=false;st.date=dayStr(1);st.am=st.day=st.pm="";fillTop();buildReqs();renderLive()};
 $("addNote").onclick=()=>{st.notes.push({text:"",on:true});buildNotes();renderLive();$("ntx"+(st.notes.length-1)).focus()};
-$("addDest").onclick=()=>{st.dests.push({name:"",drive:null,due:"",soft:false});buildDests();$("dn"+(st.dests.length-1)).focus()};
 $("copy").onclick=()=>copyText(kakao(assign()),"복사됨 · 카톡에 붙여넣기 하세요");
 $("copyRules").onclick=()=>copyText(rulesText(),"기준 글 복사됨 · 단톡방에 공유해 보세요");
 $("saveDay").onclick=()=>{if(!st.date){toast("날짜를 먼저 넣어 주세요");return}
   hist[st.date]=dayStats(assign());saveHist();renderLive();toast(`${dateText(st.date)} 기록 저장`)};
 
-buildStatic();fillTop();buildNotes();buildDests();buildReqs();bindReqBtns();renderLive();
+buildStatic();fillTop();buildNotes();buildReqs();bindReqBtns();renderLive();
 </script>
 </body>
 </html>
