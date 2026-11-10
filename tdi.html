@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-/* 레이아웃: 왼쪽 = 요청 받기 → 요청 목록 → 기준·설정, 오른쪽 = 순번표 → 카톡 미리보기 → 회사별 기록. 폰에서는 위아래로 쌓임 */
+/* 레이아웃: 왼쪽 = 요청 받기 → 요청 목록 → 기준·설정, 오른쪽 = 순번표 → 카톡 미리보기. 폰에서는 위아래로 쌓임 */
 :root{
   --bg:#eef0ee; --panel:#ffffff; --ink:#1d2321; --muted:#5f6b67; --line:#d5dad7;
   --accent:#d4570f; --accent-ink:#ffffff; --soft:#fbefe6; --ok:#1f7a4d; --late:#b42318; --mv:#a15c00;
@@ -70,22 +70,23 @@ button.big{padding:11px 18px;font-size:16px}
 /* 요청 목록 */
 .reqs{display:grid;gap:8px}
 .req{display:grid;grid-template-columns:28px 84px minmax(0,1fr) minmax(0,1fr) 32px;gap:6px;padding:8px;border:1px solid var(--line);border-radius:10px;align-items:center}
-.req .ord{grid-row:span 3;align-self:stretch;display:grid;place-items:start center;padding-top:7px;font-size:12px;font-weight:700;font-family:var(--mono);
+.req .ord{grid-row:1 / 5;align-self:stretch;display:grid;place-items:start center;padding-top:7px;font-size:12px;font-weight:700;font-family:var(--mono);
   color:var(--co);border-right:3px solid var(--co);margin-right:2px}
-.req .drv{grid-column:2 / 3} .req .arr{grid-column:3 / 4} .req .flags{grid-column:4 / 6}
+.req .place{grid-column:2 / 4} .req .drv{grid-column:4 / 6}
+.req .arr{grid-column:2 / 4} .req .flags{grid-column:4 / 6}
+.req .res{grid-column:2 / 6;font-size:13px}
 .req .arr{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);min-width:0}
 .req .arr input{flex:1;min-width:0}
 @media (max-width:520px){
   .req{grid-template-columns:24px minmax(0,1fr) minmax(0,1fr) 34px}
   .req .ord{grid-row:1 / 6}
   .req .no{grid-column:2;grid-row:1} .req .co{grid-column:3;grid-row:1} .req .del{grid-column:4;grid-row:1}
-  .req .want{grid-column:2;grid-row:2} .req .drv{grid-column:3 / 5;grid-row:2}
-  .req .arr{grid-column:2 / 5;grid-row:3}
+  .req .want{grid-column:2;grid-row:2} .req .place{grid-column:3 / 5;grid-row:2}
+  .req .drv{grid-column:2;grid-row:3} .req .arr{grid-column:3 / 5;grid-row:3}
   .req .flags{grid-column:2 / 5;grid-row:4} .req .res{grid-column:2 / 5;grid-row:5}
 }
 .req .flags{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:13px}
 .req .flags label{display:inline-flex;gap:5px;align-items:center;color:var(--muted)}
-.req .res{grid-column:2 / 6;font-size:13px}
 .req .res small{color:var(--muted)}
 .req button{padding:6px 0}
 .req select,.req input{padding:6px 8px;font-size:14px}
@@ -107,17 +108,18 @@ button.big{padding:11px 18px;font-size:16px}
 .chat{background:var(--kakao);border-radius:10px;padding:14px;overflow-x:auto}
 .bubble{background:var(--bubble);border-radius:4px 14px 14px 14px;padding:12px 14px;white-space:pre;font-size:14px;line-height:1.6;display:inline-block;min-width:60%;user-select:all}
 textarea#fallback{position:absolute;left:-9999px}
-/* 기준 */
+/* 기준·설정 */
 ol.rules{margin:0;padding-left:20px;display:grid;gap:6px;font-size:14px}
 ol.rules b{font-weight:700}
 ol.rules small{display:block;color:var(--muted);font-size:12px}
 details{border-top:1px solid var(--line);padding-top:10px}
 summary{cursor:pointer;font-weight:500;font-size:14px}
-.dtab{display:grid;gap:6px;margin-top:10px}
-.drow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.1fr) 40px 36px;gap:6px;align-items:center}
-.drow.th{font-size:12px;color:var(--muted)}
-.drow input[type=checkbox]{justify-self:center}
-.drow button{padding:6px 0}
+.ptab{display:grid;gap:6px}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) 78px minmax(0,1.3fr) 34px;gap:6px;align-items:center}
+.prow.th{font-size:12px;color:var(--muted)}
+.prow input{padding:6px 8px;font-size:14px}
+.prow button{padding:6px 0}
+.corow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:6px}
 .notes{display:grid;gap:6px}
 .nrow{display:grid;grid-template-columns:24px minmax(0,1fr) 34px 34px;gap:6px;align-items:start}
 .nrow input[type=checkbox]{margin-top:9px;justify-self:center}
@@ -126,13 +128,6 @@ summary{cursor:pointer;font-weight:500;font-size:14px}
 .nrow button{padding:6px 0}
 .nrow button:disabled{opacity:.35;cursor:default}
 .formula{font-size:13px;background:var(--bg);border-radius:8px;padding:8px 10px;color:var(--muted)}
-/* 기록 표 */
-.tablebox{overflow-x:auto}
-table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
-th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
-th{font-size:12px;color:var(--muted);font-weight:500}
-th:first-child,td:first-child{text-align:left}
-td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);vertical-align:middle;margin-left:6px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -146,7 +141,7 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
 <div class="wrap">
   <div class="col">
     <div class="banner" id="sampleBanner" hidden>
-      <span>지금 화면은 <b>10월 29일 배차로 채운 예시</b>예요. 다른 회사 차가 어느 회사인지는 임의로 나눠 둔 거예요.</span>
+      <span>지금 화면은 <b>11월 11일 단톡방 글을 그대로 붙여넣은 예시</b>예요.</span>
       <button type="button" class="small" id="clearSample">예시 지우고 시작</button>
     </div>
 
@@ -162,15 +157,15 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
 
     <section class="panel sec" aria-label="요청 받기">
       <div class="head">
-        <p class="label">① 단톡방 요청 붙여넣기</p>
+        <p class="label">① 단톡방 글 붙여넣기</p>
         <button type="button" class="small" id="clearPaste">글 지우기</button>
       </div>
+      <textarea id="paste" rows="8" placeholder="한정&#10;3611 / 금성 17시&#10;7577 / 상차만&#10;&#10;한화&#10;1조 7489 나주후 당진&#10;3조 8592 영천 13시&#10;&#10;혜성&#10;1596 시흥 9시 1조"></textarea>
       <div class="row" style="align-items:end">
-        <label class="field" style="flex:0 1 180px"><span>어느 회사 글인가요?</span><select id="pasteCo"></select></label>
+        <label class="field" style="flex:1 1 180px"><span>회사 이름이 없는 글은 이 회사로</span><select id="pasteCo"></select></label>
         <button type="button" class="primary" id="addPaste">요청 목록에 넣기</button>
       </div>
-      <textarea id="paste" rows="6" placeholder="5조 2636&#10;8조 9405. 4746&#10;3611 / 5시간 / 13시&#10;5278 / 4시간30분"></textarea>
-      <p class="hint">"5조 2636", "2636 5조", "8조 : 9405. 4746"은 신청 조로 읽어요. "3611 / 5시간 / 13시"처럼 쓰면 걸리는 시간과 도착 지정 시간까지 읽어요. 붙여넣은 순서가 곧 "먼저 올린 순서"입니다.</p>
+      <p class="hint">4개 회사 글을 한꺼번에 붙여넣어도 돼요. "한정", "한화", "혜성", "비봉" 같은 줄을 보고 회사를 나눠요. "나주후 당진"은 TDI에서 두 번 싣는 2회전으로, "충주당/울산당 2회전"은 TDI에서 한 번만 싣는 차로 읽어요. 하차지 이름으로 걸리는 시간을 채우고, "13시", "10시착"은 도착 지정 시간으로 읽어요.</p>
     </section>
 
     <section class="panel sec" aria-label="요청 목록">
@@ -182,7 +177,7 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
         </div>
       </div>
       <div class="reqs" id="reqs"></div>
-      <p class="hint">신청 조나 걸리는 시간을 바꾸거나 <b>고정</b>에 체크하면 순번표가 바로 다시 짜여요. 요청 마감 뒤에 올라온 요청은 <b>늦게 올림</b>에 체크하세요.</p>
+      <p class="hint">신청 조, 하차지, 걸리는 시간을 고치거나 <b>고정</b>에 체크하면 순번표가 바로 다시 짜여요. 같은 차번을 두 줄로 넣으면 TDI 2회전으로 계산해요.</p>
     </section>
 
     <section class="panel sec" aria-label="순번 기준">
@@ -192,21 +187,29 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
       </div>
       <ol class="rules">
         <li><b>고정한 차</b><small>담당자가 직접 정한 자리. 무엇보다 먼저 들어가요.</small></li>
-        <li><b>도착 시간이 정해진 차</b><small>하차지에서 도착 시간을 정해 준 차. 걸리는 시간으로 계산해 그 시간에 맞는 조를 먼저 받아요.</small></li>
+        <li><b>도착 시간이 정해진 차</b><small>하차지에서 도착 시간을 정해 준 차. 그 시간에 맞는 조를 먼저 받아요. 1조로도 당일에 못 맞추면 다음 날 착으로 봐요.</small></li>
         <li><b>신청한 조</b><small>같은 조가 꽉 차면
           <select id="rule" style="width:auto;padding:2px 6px;font-size:13px">
             <option value="first">먼저 올린 차</option>
             <option value="far">걸리는 시간이 긴 차</option>
           </select> 우선. 밀린 차는 가장 가까운 빈 조로 가요.</small></li>
         <li><b>늦게 올린 요청</b><small>요청 마감 뒤에 올린 차는 남은 칸으로.</small></li>
-        <li><b>조 상관없는 차</b><small>걸리는 시간이 긴 차부터 이른 빈 조로.</small></li>
+        <li><b>조 상관없는 차</b><small>걸리는 시간이 긴 차부터 이른 빈 조로. TDI 2회전 차의 두 번째 탕은 돌아온 뒤의 조로.</small></li>
       </ol>
       <label class="field"><span>요청 마감 (단톡방에 같이 알릴 문구)</span><input id="cutoff" placeholder="예: 전날 18시까지"></label>
 
       <details>
+        <summary>지역별 걸리는 시간</summary>
+        <div class="sec" style="margin-top:10px">
+          <p class="hint">TDI에서 하차지까지 걸리는 시간이에요. 처음 값은 거리로 대충 잡은 거라 실제 시간으로 고쳐 주세요. "다른 이름"에 거래처 이름을 쉼표로 넣으면(예: 수정, 천보) 그 이름으로도 찾아요.</p>
+          <div class="ptab" id="ptab"></div>
+          <div class="btns"><button type="button" class="small" id="addPlace">지역 추가</button></div>
+        </div>
+      </details>
+      <details>
         <summary>순번표 설정 · 회사 이름 · 도착 계산</summary>
         <div class="sec" style="margin-top:10px">
-          <div class="row" id="coNames"></div>
+          <div class="ptab" id="coNames"></div>
           <div class="row">
             <label class="field"><span>마지막 조</span><select id="lastMode"></select></label>
           </div>
@@ -217,7 +220,6 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
             <label class="field"><span>휴게 넣는 방식</span>
               <select id="restMode"><option value="once">한 번만</option><option value="per2h">2시간 운전마다</option></select></label>
           </div>
-          <p class="hint">도착 시간은 보기용이고, 같은 차가 두 탕 돌 때 돌아오는 시간 계산에도 써요.</p>
         </div>
       </details>
     </section>
@@ -229,8 +231,7 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
         <p class="label">순번표</p>
         <label style="font-size:14px;font-weight:500"><input type="checkbox" id="jeo"> 오늘 저순도 있음 (2조)</label>
       </div>
-      <div class="legend" id="legend">
-      </div>
+      <div class="legend" id="legend"></div>
       <p class="hint" id="jeoHint"></p>
       <div class="board" id="board"></div>
     </section>
@@ -251,7 +252,6 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
         <label class="field"><span>오늘만 붙일 문구</span><input id="note" placeholder="예: 내일은 후문 공사로 정문만 사용"></label>
       </div>
     </section>
-
   </div>
 </div>
 <textarea id="fallback" aria-hidden="true" tabindex="-1"></textarea>
@@ -259,7 +259,7 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
 <script>
 const TIMES=["06:20","07:40","08:05","08:55","09:45","10:35","11:25","12:15","13:05","13:55","14:45","15:35","16:25","17:00","18:10","19:00","19:50","20:30"];
 const N=TIMES.length;
-const KEY="tdi-baecha-v2",HKEY="tdi-baecha-hist";
+const KEY="tdi-baecha-v2";
 const WD=["일","월","화","수","목","금","토"];
 const toMin=s=>{const[h,m]=s.split(":").map(Number);return h*60+m};
 const START=TIMES.map(toMin);
@@ -278,35 +278,14 @@ const norm=s=>(s||"").replace(/[\s.·]/g,"").toLowerCase();
 function dayStr(add){const t=new Date();t.setDate(t.getDate()+add);return `${t.getFullYear()}-${p2(t.getMonth()+1)}-${p2(t.getDate())}`}
 const $=id=>document.getElementById(id);
 
-function sample(){
-  const R=[];let id=1;
-  const add=(no,co,want,drive=null,arr="")=>R.push({id:id++,no,co,want,drive,arr,pin:false,late:false});
-  add("2531",1,1);add("1537",1,2);add("3047",1,4);add("2636",1,5);
-  add("7622",2,6);add("9405",2,8);add("4746",2,8);add("7489",2,9);
-  add("2551",3,10);add("1537",1,12);add("6442",3,12);add("9400",3,13);add("2531",1,16);add("5312",3,17);
-  add("3611",0,null,300,"13:00");add("4649",0,null,240,"13:00");add("4693",0,null,300,"18:00");
-  add("5273",0,null,240);add("5278",0,null,270);add("7497",0,null,270);add("7587",0,null,240);
-  add("7600",0,null,120);add("7600",0,null,300,"22:00");add("5294",0,null,240);
-  return {reqs:R,seq:id};
-}
-
-/* ---------- 상태 ---------- */
-let st=null;
-try{st=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-if(!st||!Array.isArray(st.reqs)){
-  const s=sample();
-  st={date:"2026-10-29",am:"덕원",day:"민성",pm:"용준",note:"☆점심시간 없이 연속 상차☆",cutoff:"",lastMode:"auto",jeo:true,showReasons:true,rule:"first",
-    load:50,rest:20,restMode:"once",cos:["한정특수","한익스","혜성","비봉"],reqs:s.reqs,seq:s.seq,pasteCo:0,sample:true};
-}
-{const NM=["한정특수","한익스","혜성","비봉"];st.cos=st.cos.map((c,k)=>/^예시[BCD]$/.test(c)?NM[k]:c);}
-// 예전 버전(거래처 표)에서 넘어온 경우: 거래처 운전시간을 차마다 옮기고 거래처 정보는 정리
-if(Array.isArray(st.dests)){
-  const find=n=>{n=norm(n);if(!n)return null;return st.dests.find(d=>norm(d.name)===n)||st.dests.find(d=>norm(d.name)&&(norm(d.name).includes(n)||n.includes(norm(d.name))))};
-  st.reqs.forEach(r=>{if(r.drive==null&&r.dest){const d=find(r.dest);if(d&&d.drive!=null)r.drive=d.drive}});
-  delete st.dests;
-}
-st.reqs.forEach(r=>{if(r.arr===undefined)r.arr=r.due||"";delete r.dest;delete r.due;if(r.drive===undefined)r.drive=null});
-if(!["first","far"].includes(st.rule))st.rule="first";
+const DEF_COS=["한정특수","한익스","혜성","비봉"];
+const DEF_ALIAS=["한정","한화","",""];
+// 처음 값은 거리로 잡은 대략의 시간 (TDI → 하차지)
+const DEF_PLACES=[
+  ["금성",300,""],["한수",240,""],["익산",120,"창대"],["대죽",270,"KCC"],["당진",240,"삼주, 광진"],
+  ["포항",240,"대경"],["영천",210,""],["진천",240,"수정"],["충주",270,"천보"],["인천",300,"이영"],
+  ["시흥",270,""],["화성",240,""],["부산",180,""],["나주",90,""],["울산",210,""],["군산",180,""],["코솔텍",240,""]
+].map(([name,drive,alias])=>({name,drive,alias}));
 const DEF_NOTES=[
   "☆점심시간 없이 연속 상차☆",
   "☆한타임에 평균 50분 예상\n당일 염산 나오는 속도에 따라 입차 시간이 2분~5분씩 늘어지거나 당겨질 수 있으니 10분 전에 미리 대기☆",
@@ -315,12 +294,115 @@ const DEF_NOTES=[
   "☆후문출입 12시30분에 후문개방\n근무자 지시에 따라 12시 10분 이후에 후문출입\n\n7조는 후문출입 정문출차, 8조는 정문출입 후문출차 예상됩니다\n당일 시간에 따라 변동되니 확실치 않습니다☆",
   "☆14조는 근무자 전화받고 입차 (17시~17시30분)☆",
   "☆13조나 14조는 정확한 입차시간 아님☆"];
+const SAMPLE_TEXT=`한정
+
+3611 / 금성 17시
+5233 / 대경포항 14시
+5273 / 금성 20시
+7570 / 수정 13시*
+7584 / 천보 16시
+7597 / 코솔텍 18시
+7598 / 이영원료 20시
+7577 / 상차만
+
+11일 한화
+1조 7489 나주후 당진
+3조 8592 영천 13시
+4조 2720 영천 13시
+5조 7486 화성
+6조 1147 부산2착
+7조 7622 부산
+
+혜성
+6426 시흥 두군데 10시착 1조
+1596 시흥 9시 1조
+4746 당진 4조
+
+비봉
+1조 2531 충주당/울산당 2회전
+2조 1537저순도
+3조 3047 포항당/ 군산당 2회전`;
+
+/* ---------- 상태 ---------- */
+let st=null;
+try{st=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+const fresh=!st||!Array.isArray(st.reqs);
+if(fresh)st={am:"",day:"",pm:"",note:"",cutoff:"",lastMode:"auto",jeo:true,showReasons:true,rule:"first",load:50,rest:20,restMode:"once",cos:DEF_COS.slice(),reqs:[],seq:1,pasteCo:0};
+st.cos=(st.cos||DEF_COS).map((c,k)=>/^예시[BCD]$/.test(c)?DEF_COS[k]:c);
+if(!Array.isArray(st.coAlias))st.coAlias=DEF_ALIAS.slice();
+if(!Array.isArray(st.places))st.places=structuredClone(DEF_PLACES);
+delete st.dests;
+if(!["first","far"].includes(st.rule))st.rule="first";
 if(!Array.isArray(st.notes)){st.notes=DEF_NOTES.map(t=>({text:t,on:false}));
   const k=st.notes.findIndex(n=>n.text===(st.note||"").trim());if(k>=0){st.notes[k].on=true;st.note=""}}
-if(!st.sample&&(!st.date||st.date<dayStr(1)))st.date=dayStr(1);
-try{localStorage.removeItem(HKEY)}catch(e){}
+st.reqs.forEach(r=>{if(r.arr===undefined)r.arr=r.due||"";if(r.place===undefined)r.place=r.dest||"";delete r.dest;delete r.due;if(r.drive===undefined)r.drive=null});
+try{localStorage.removeItem("tdi-baecha-hist")}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
 const coName=k=>st.cos[k]||`회사${k+1}`;
+
+/* ---------- 지역 → 걸리는 시간 ---------- */
+function findPlace(text){
+  const n=norm(text);if(!n)return null;let best=null,len=0;
+  for(const p of st.places){
+    for(const nm of [p.name,...(p.alias||"").split(",")]){const k=norm(nm);if(k&&n.includes(k)&&k.length>len){best=p;len=k.length}}
+  }
+  return best;
+}
+const placeDrive=t=>{const p=findPlace(t);return p&&p.drive!=null?p.drive:null};
+
+/* ---------- 붙여넣기 읽기 ---------- */
+function findCo(line){
+  const n=norm(line);let best=null,len=0;
+  st.cos.forEach((c,k)=>{for(const nm of [c,...(st.coAlias[k]||"").split(",")]){const x=norm(nm);if(x&&n.includes(x)&&x.length>len){best=k;len=x.length}}});
+  return best;
+}
+function readDate(line){
+  let m;
+  if(m=line.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/))return [+m[1],+m[2]];
+  if(m=line.match(/(\d{1,2})\s*\/\s*(\d{1,2})/))return [+m[1],+m[2]];
+  if(m=line.match(/(\d{1,2})\s*일/)){const t=new Date();let mo=t.getMonth()+1;if(+m[1]<t.getDate()-15)mo=mo%12+1;return [mo,+m[1]]}
+  return null;
+}
+function parseLine(raw){
+  let L=raw.replace(/\*/g," ").trim();
+  const cars=[];L.replace(/(^|[^\d:.])(\d{4})(?!\d)/g,(a,b,c)=>{cars.push(c);return a});
+  if(!cars.length)return null;
+  cars.forEach(c=>{L=L.replace(c," ")});   // 차번을 먼저 빼야 "6426 시흥"이 26시로 안 읽힘
+  let w=null,drive=null,arr="",t;
+  if(t=L.match(/(\d+(?:\.\d+)?)\s*시간(?:\s*(\d+)\s*분)?/)){drive=Math.round(+t[1]*60)+(+t[2]||0);L=L.replace(t[0]," ")}
+  if(t=L.match(/(\d{1,2})\s*조/)){if(+t[1]>=1&&+t[1]<=N)w=+t[1];L=L.replace(t[0]," ")}
+  if(t=L.match(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/)){if(+t[1]<=24)arr=`${p2(+t[1])}:${p2(+t[2]||0)}`;L=L.replace(t[0]," ")}
+  const jeo=/저순도/.test(L);
+  const loadOnly=/상차만/.test(L);
+  const twoElse=/2\s*회전/.test(L);
+  L=L.replace(/저순도|상차만|2\s*회전|두\s*군데|\d?\s*착/g," ").replace(/당(?=\s*\/|\s*$)/g,"").replace(/[:：,.()]/g," ")
+     .replace(/^\s*\/|\/\s*$/g,"").replace(/\s*\/\s*/g,"/").replace(/\s+/g," ").trim();
+  // "나주후 당진" → TDI에서 두 번 싣는 2회전
+  let trips=[L];
+  const two=L.match(/^(.+?)\s*(?:후|→|->)\s+(.+)$/);
+  if(two)trips=[two[1].trim(),two[2].trim()];
+  const out=[];
+  for(const no of cars){
+    trips.forEach((pl,k)=>{
+      const last=k===trips.length-1;
+      const place=loadOnly?"상차만":(twoElse&&trips.length===1?pl+" (2차 다른 곳 상차)":pl);
+      out.push({no,want:k===0?w:null,place,drive:drive!=null&&trips.length===1?drive:placeDrive(pl.split("/")[0]),arr:last?arr:"",
+        pin:jeo&&w===2&&k===0});   // "2조 1537저순도" → 저순도 차는 2조에 고정
+    });
+  }
+  return {items:out,jeo};
+}
+function parsePaste(text,defCo){
+  const out=[];let date=null,co=defCo,jeo=false;
+  for(const raw of (text||"").split(/\r?\n/)){
+    const line=raw.trim();if(!line)continue;
+    const r=parseLine(line);
+    if(!r){const d=readDate(line);if(d)date=d;const c=findCo(line);if(c!=null)co=c;continue}
+    if(r.jeo)jeo=true;
+    r.items.forEach(it=>out.push({...it,co}));
+  }
+  return {items:out,date,jeo};
+}
 
 /* ---------- 계산 ---------- */
 const restOf=d=>d==null||d<=0?0:(st.restMode==="per2h"?Math.floor(d/120)*st.rest:st.rest);
@@ -331,12 +413,13 @@ function assign(){
   const cap=s=>2-(s===1&&st.jeo?1:0);
   const occ=Array.from({length:N},()=>[]);
   const res=R.map(()=>({slot:null,status:"none",reason:""}));
-  const info=R.map(r=>({d:r.drive??null,w:r.want?r.want-1:null,due:r.arr?toMin(r.arr):null}));
+  const info=R.map(r=>{const d=r.drive??null;let due=r.arr?toMin(r.arr):null,next=false;
+    if(due!=null&&d!=null&&arrive(0,d)>due){due=null;next=true}   // 1조로도 못 맞추면 다음 날 착
+    return {d,w:r.want?r.want-1:null,due,next}});
   const prev=R.map((r,i)=>{for(let j=i-1;j>=0;j--)if(R[j].no&&R[j].no===r.no)return j;return -1});
   const grp=R.map((r,i)=>r.pin&&info[i].w!=null?0:(info[i].due!=null&&info[i].d!=null)?1:info[i].w!=null?2:3);
   const free=s=>occ[s].length<cap(s);
   const fits=(i,s)=>{const f=info[i];return f.due==null||f.d==null||arrive(s,f.d)<=f.due};
-  // 같은 차 두 번째 탕: 첫 탕 상차 + 왕복 + 휴게 뒤에만
   const es=i=>{const j=prev[i];if(j<0)return -Infinity;const p=res[j].slot;if(p==null)return null;
     const d=info[j].d;return d==null?START[p]+1:START[p]+st.load+2*d+2*restOf(d)};
   const done=new Set();
@@ -346,17 +429,15 @@ function assign(){
   const G=[0,1,2,3].map(g=>idx.filter(i=>grp[i]===g));
   const feas=i=>{let c=0;for(let s=0;s<N;s++)if(fits(i,s))c++;return c};
   G[1].sort((a,b)=>cmp([R[a].late?1:0,feas(a),info[a].due,a],[R[b].late?1:0,feas(b),info[b].due,b]));
-  const k2=i=>{const late=R[i].late?1:0;
-    if(st.rule==="far")return [late,-(info[i].d||0),i];
-    return [late,i]};
+  const k2=i=>{const late=R[i].late?1:0;return st.rule==="far"?[late,-(info[i].d||0),i]:[late,i]};
   G[2].sort((a,b)=>cmp(k2(a),k2(b)));
-  const hasNext=i=>prev.some(j=>j===i)?0:1; // 두 탕 도는 차의 첫 탕은 먼저
+  const hasNext=i=>prev.some(j=>j===i)?0:1;
   G[3].sort((a,b)=>cmp([R[a].late?1:0,hasNext(a),-(info[a].d||0),a],[R[b].late?1:0,hasNext(b),-(info[b].d||0),b]));
   const put=(i,s)=>{occ[s].push(i);res[i].slot=s;done.add(i)};
   const firstFrom=e=>{for(let s=0;s<N;s++)if(START[s]>=e)return s+1;return N};
 
   function whyNot(i,w,e){
-    if(START[w]<e)return `두 번째 탕이라 ${firstFrom(e)}조부터 가능`;
+    if(START[w]<e)return `TDI 2회전이라 ${firstFrom(e)}조부터 가능`;
     if(!fits(i,w))return `${w+1}조는 도착 ${fmt(info[i].due)}에 늦음`;
     const js=occ[w];
     const pin=js.find(j=>grp[j]===0);if(pin!=null)return `${w+1}조에 고정 차(${R[pin].no})`;
@@ -387,7 +468,7 @@ function assign(){
     const sp=cand.filter(s=>occ[s].length+demand(s)<cap(s));
     if(f.due!=null&&f.d!=null){put(i,(sp.length?sp:cand).at(-1));res[i].status="auto";res[i].reason=`도착 ${fmt(f.due)}에 맞춘 가장 늦은 조`;return true}
     put(i,(sp.length?sp:cand)[0]);res[i].status="auto";
-    res[i].reason=e>-Infinity?"두 번째 탕, 가능한 가장 이른 조":f.d!=null?"걸리는 시간 긴 차부터 이른 조":"빈 조 중 가장 이른 조";
+    res[i].reason=e>-Infinity?"TDI 2회전, 돌아온 뒤 가장 이른 조":R[i].place==="상차만"?"상차만, 빈 조":f.d!=null?"걸리는 시간 긴 차부터 이른 조":"빈 조 중 가장 이른 조";
     return true;
   }
 
@@ -430,21 +511,22 @@ function rulesText(){
     ...(st.cutoff?[`요청 마감 : ${st.cutoff}`]:[])].join("\n");
 }
 
-
 /* ---------- 화면 만들기 ---------- */
 function coOptions(sel){return st.cos.map((c,k)=>`<option value="${k}"${k===sel?" selected":""}>${esc(c)}</option>`).join("")}
 function wantOptions(sel){let h=`<option value="">아무 조</option>`;for(let s=1;s<=N;s++)h+=`<option value="${s}"${s===sel?" selected":""}>${s}조 ${TIMES[s-1]}</option>`;return h}
+const legendHtml=()=>st.cos.map((c,k)=>`<span class="chip c${k}" style="font-family:var(--sans);font-size:12px">${esc(c)}</span>`).join("");
 
 function buildReqs(){
   $("reqs").innerHTML=st.reqs.map((r,k)=>`
     <div class="req c${r.co}" id="row${r.id}">
-      <span class="ord" id="r${r.id}ord">${k+1}</span>
+      <span class="ord">${k+1}</span>
       <input class="mono no" id="r${r.id}no" aria-label="차번" placeholder="차번" maxlength="8" value="${esc(r.no)}">
       <select class="co" id="r${r.id}co" aria-label="회사">${coOptions(r.co)}</select>
       <select class="want" id="r${r.id}want" aria-label="신청한 조">${wantOptions(r.want)}</select>
       <button type="button" class="small del" data-del="${r.id}" aria-label="${esc(r.no)} 지우기">✕</button>
-      <label class="arr"><span>도착 지정</span><input type="time" id="r${r.id}arr" value="${esc(r.arr||"")}"></label>
-      <input class="drv mono" id="r${r.id}drive" aria-label="걸리는 시간" placeholder="걸리는 시간 예: 4:30" value="${esc(fmtDur(r.drive))}">
+      <input class="place" id="r${r.id}place" aria-label="하차지" placeholder="하차지" value="${esc(r.place)}">
+      <input class="drv mono" id="r${r.id}drive" aria-label="걸리는 시간" placeholder="걸리는 시간" value="${esc(fmtDur(r.drive))}">
+      <label class="arr"><span>도착</span><input type="time" id="r${r.id}arr" value="${esc(r.arr||"")}"></label>
       <div class="flags">
         <label><input type="checkbox" id="r${r.id}pin"${r.pin?" checked":""}> 고정</label>
         <label><input type="checkbox" id="r${r.id}late"${r.late?" checked":""}> 늦게 올림</label>
@@ -452,6 +534,15 @@ function buildReqs(){
       <div class="res" id="r${r.id}res"></div>
     </div>`).join("")||`<p class="hint">아직 요청이 없어요. 위에 단톡방 글을 붙여넣거나 "한 대 추가"를 누르세요.</p>`;
   $("reqCount").textContent=st.reqs.filter(r=>r.no).length;
+}
+
+function buildPlaces(){
+  $("ptab").innerHTML=`<div class="prow th"><span>지역</span><span>걸리는 시간</span><span>다른 이름</span><span></span></div>`+
+  st.places.map((p,n)=>`<div class="prow">
+    <input id="pn${n}" aria-label="지역 이름" value="${esc(p.name)}">
+    <input id="pd${n}" class="mono" aria-label="${esc(p.name)} 걸리는 시간" placeholder="4:30" value="${esc(fmtDur(p.drive))}">
+    <input id="pa${n}" aria-label="${esc(p.name)} 다른 이름" placeholder="예: 수정, 천보" value="${esc(p.alias||"")}">
+    <button type="button" class="small" data-pdel="${n}" aria-label="${esc(p.name)} 지우기">✕</button></div>`).join("");
 }
 
 function buildNotes(){
@@ -467,10 +558,11 @@ addEventListener("resize",()=>document.querySelectorAll(".nrow textarea").forEac
 
 function buildStatic(){
   $("pasteCo").innerHTML=coOptions(+st.pasteCo||0);
-  $("coNames").innerHTML=st.cos.map((c,k)=>`<label class="field"><span>회사 ${k+1}</span><input id="coName${k}" value="${esc(c)}"></label>`).join("");
+  $("coNames").innerHTML=`<div class="corow prow th"><span>회사 이름</span><span>단톡방에서 부르는 이름</span></div>`+
+    st.cos.map((c,k)=>`<div class="corow"><input id="coName${k}" aria-label="회사 ${k+1} 이름" value="${esc(c)}"><input id="coAlias${k}" aria-label="${esc(c)} 다른 이름" placeholder="예: 한화" value="${esc(st.coAlias[k]||"")}"></div>`).join("");
   let h=`<option value="auto">자동 (쓴 조까지)</option>`;for(let s=1;s<=N;s++)h+=`<option value="${s}">${s}조까지</option>`;
   $("lastMode").innerHTML=h;
-  $("legend").innerHTML=st.cos.map((c,k)=>`<span class="chip c${k}" style="font-family:var(--sans);font-size:12px">${esc(c)}</span>`).join("");
+  $("legend").innerHTML=legendHtml();
 }
 
 function fillTop(){
@@ -493,7 +585,9 @@ function renderLive(){
     else h=`<b class="late">자리 없음</b> <small>${esc(x.reason)}</small>`;
     if(x.slot!=null&&f.d!=null){const a=arrive(x.slot,f.d);h+=` · ${fmt(a)} 도착 예상`;
       if(f.due!=null)h+=a>f.due?` <span class="late">지정 ${fmt(f.due)}보다 ${a-f.due}분 늦음</span>`:` <span class="okc">✓ 지정 ${fmt(f.due)}</span>`}
-    else if(f.due!=null&&f.d==null)h+=` · <span class="late">걸리는 시간을 넣어야 도착 시간을 맞춰요</span>`;
+    if(f.next)h+=` · <span class="mv">${r.arr} 도착은 당일 불가 → 다음 날 착으로 봄</span>`;
+    else if(r.arr&&f.d==null)h+=` · <span class="late">걸리는 시간을 넣어야 도착 시간을 맞춰요</span>`;
+    if(r.place&&!["상차만","저순도"].includes(r.place)&&f.d==null&&!findPlace(r.place))h+=` · <span class="mv">"${esc(r.place)}"의 걸리는 시간을 몰라요</span>`;
     el.innerHTML=h;
   });
   const last=lastSlot(A);let b="";
@@ -501,9 +595,10 @@ function renderLive(){
     if(s===13)b+=`<div class="divider">저녁시간</div>`;
     const cars=A.occ[s].map(i=>{const r=st.reqs[i],x=A.res[i],f=A.info[i];
       const mk=x.status==="moved"?`<span class="mk">↪${r.want}조</span>`:x.status==="pin"?`<span class="mk">고정</span>`:"";
-      let sm=f.d!=null?`${fmtDur(f.d)} → ${fmt(arrive(s,f.d))}`:"";
+      let sm=esc(r.place||"");
+      if(f.d!=null)sm+=` → ${fmt(arrive(s,f.d))}`;
       if(f.due!=null&&f.d!=null)sm+=arrive(s,f.d)>f.due?` <span class="late">(지정 ${fmt(f.due)})</span>`:` (지정 ${fmt(f.due)})`;
-      return `<span class="car"><span class="chip c${r.co}" title="${esc(coName(r.co))}">${esc(r.no)}${mk}</span>${sm?`<small>${sm}</small>`:""}</span>`});
+      return `<span class="car"><span class="chip c${r.co}" title="${esc(coName(r.co))}">${esc(r.no)}${mk}</span>${sm.trim()?`<small>${sm}</small>`:""}</span>`});
     if(s===1&&st.jeo)cars.push(`<span class="car"><span class="chip jeo">저순도</span></span>`);
     const over=A.occ[s].length>A.cap(s);
     b+=`<div class="slot${s>=last?" off":""}${over?" over":""}"><span class="no">${s+1}조</span><span class="tm">${s===13?"17:00~30":TIMES[s]}</span><span class="cars">${cars.join("")}</span></div>`;
@@ -516,33 +611,9 @@ function renderLive(){
   return A;
 }
 
-
-/* ---------- 붙여넣기 읽기 ---------- */
-function driveIn(line){const t=line.match(/(\d+(?:\.\d+)?)\s*시간(?:\s*(\d+)\s*분)?/);return t?Math.round(+t[1]*60)+(+t[2]||0):null}
-function parsePaste(text){
-  const out=[];let date=null;
-  for(const raw of (text||"").split(/\r?\n/)){
-    const line=raw.trim();if(!line)continue;let m;
-    if(m=line.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/)){date=[+m[1],+m[2]];continue}
-    if(!/^\d{3,}/.test(line)&&(m=line.match(/(\d{1,2})\s*\/\s*(\d{1,2})/))&&!/조/.test(line)){date=[+m[1],+m[2]];continue}
-    const drive=driveIn(line);
-    const at=line.replace(/(\d+(?:\.\d+)?)\s*시간/,"").match(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/);
-    const arr=at&&+at[1]<=24?`${p2(+at[1])}:${p2(+at[2]||0)}`:"";
-    if(m=line.match(/^(\d{1,2})\s*조\s*[:：]?\s*(.*)$/)){
-      const w=+m[1];if(w<1||w>N)continue;
-      (m[2].replace(/(\d+(?:\.\d+)?)\s*시간(?:\s*\d+\s*분)?/,"").match(/\d{4}/g)||[]).forEach(no=>out.push({no,want:w,drive,arr}));continue}
-    if(m=line.match(/^([0-9A-Za-z가-힣]+)\s*\/\s*(.+)$/)){
-      const t=m[2].match(/(\d{1,2})\s*조/);const w=t?+t[1]:null;
-      out.push({no:m[1],want:w&&w<=N?w:null,drive,arr});continue}
-    if(m=line.match(/^(\d{4})\D+?(\d{1,2})\s*조/)){if(+m[2]<=N)out.push({no:m[1],want:+m[2],drive,arr});continue}
-    if(m=line.match(/^(\d{4})\.?(?:\s|$)/)){out.push({no:m[1],want:null,drive,arr});continue}
-  }
-  return {items:out,date};
-}
-
 /* ---------- 이벤트 ---------- */
 let tId;
-function toast(msg){$("toast").textContent=msg;clearTimeout(tId);tId=setTimeout(()=>$("toast").textContent="",3500)}
+function toast(msg){$("toast").textContent=msg;clearTimeout(tId);tId=setTimeout(()=>$("toast").textContent="",4000)}
 function copyText(t,okMsg){
   const fb=()=>{const ta=$("fallback");ta.value=t;ta.select();let ok=false;try{ok=document.execCommand("copy")}catch(e){}
     if(ok)toast(okMsg);else{const r=document.createRange();r.selectNodeContents($("out"));const s=getSelection();s.removeAllRanges();s.addRange(r);toast("글이 선택됐어요. 길게 눌러 복사하세요")}};
@@ -555,13 +626,26 @@ function askIn(areaId,msg,yesLabel,onYes){
   $("cfYes").onclick=()=>{onYes();back()};$("cfNo").onclick=back;
 }
 function bindReqBtns(){
-  $("addOne").onclick=()=>{st.reqs.push({id:st.seq++,no:"",co:+$("pasteCo").value||0,want:null,drive:null,arr:"",pin:false,late:false});buildReqs();renderLive();$(`r${st.seq-1}no`).focus()};
-  $("clearReqs").onclick=()=>askIn("reqBtns","요청을 모두 지울까요?","모두 지우기",()=>{st.reqs=[];buildReqs();renderLive()});
+  $("addOne").onclick=()=>{st.reqs.push({id:st.seq++,no:"",co:+$("pasteCo").value||0,want:null,place:"",drive:null,arr:"",pin:false,late:false});st.sample=false;fillTop();buildReqs();renderLive();$(`r${st.seq-1}no`).focus()};
+  $("clearReqs").onclick=()=>askIn("reqBtns","요청을 모두 지울까요?","모두 지우기",()=>{st.reqs=[];st.sample=false;fillTop();buildReqs();renderLive()});
+}
+function addFromText(text,defCo){
+  const {items,date,jeo}=parsePaste(text,defCo);
+  if(!items.length)return {added:0,skip:0,count:{}};
+  let added=0,skip=0;const count={};
+  for(const it of items){
+    if(st.reqs.some(r=>r.no===it.no&&r.co===it.co&&r.want===it.want&&r.place===it.place&&(r.arr||"")===it.arr)){skip++;continue}
+    st.reqs.push({id:st.seq++,no:it.no,co:it.co,want:it.want,place:it.place||(it.pin?"저순도":""),drive:it.drive,arr:it.arr,pin:!!it.pin,late:false});added++;
+    count[it.co]=(count[it.co]||0)+1;
+  }
+  if(date){const y=(st.date||dayStr(1)).slice(0,4);st.date=`${y}-${p2(date[0])}-${p2(date[1])}`}
+  if(jeo)st.jeo=true;
+  return {added,skip,count};
 }
 
 document.addEventListener("input",e=>{
   const t=e.target,id=t.id;let m;
-  if(m=id.match(/^r(\d+)(no|co|want|drive|arr|pin|late)$/)){
+  if(m=id.match(/^r(\d+)(no|co|want|place|drive|arr|pin|late)$/)){
     const r=st.reqs.find(x=>x.id===+m[1]);if(!r)return;const k=m[2];
     if(k==="pin"||k==="late")r[k]=t.checked;
     else if(k==="co"){r.co=+t.value;$(`row${r.id}`).className=`req c${r.co}`}
@@ -570,11 +654,14 @@ document.addEventListener("input",e=>{
     else if(k==="arr")r.arr=t.value;
     else r[k]=t.value.trim();
     if(k==="no")$("reqCount").textContent=st.reqs.filter(x=>x.no).length;
-    st.sample=false;renderLive();return;
+    st.sample=false;$("sampleBanner").hidden=true;renderLive();return;
   }
   if(m=id.match(/^n(on|tx)(\d+)$/)){const n=st.notes[+m[2]];if(!n)return;
     if(m[1]==="on"){n.on=t.checked;$("nrow"+m[2]).classList.toggle("offn",!n.on)}else{n.text=t.value;fit(t)}
     renderLive();return}
+  if(m=id.match(/^p([nda])(\d+)$/)){const p=st.places[+m[2]];if(!p)return;
+    if(m[1]==="n")p.name=t.value.trim();else if(m[1]==="d")p.drive=parseDur(t.value);else p.alias=t.value;
+    save();return}
   if(["date","am","day","pm","note","cutoff"].includes(id)){st[id]=t.value;renderLive();return}
   if(id==="lastMode"){st.lastMode=t.value;renderLive();return}
   if(id==="jeo"||id==="showReasons"){st[id]=t.checked;renderLive();return}
@@ -584,12 +671,20 @@ document.addEventListener("input",e=>{
   if(id==="restMode"){st.restMode=t.value;renderLive();return}
   if(m=id.match(/^coName(\d)$/)){st.cos[+m[1]]=t.value.trim()||`회사${+m[1]+1}`;
     document.querySelectorAll('select.co,#pasteCo').forEach(s=>{const v=+s.value;s.innerHTML=coOptions(v)});
-    $("legend").innerHTML=st.cos.map((c,k)=>`<span class="chip c${k}" style="font-family:var(--sans);font-size:12px">${esc(c)}</span>`).join("");
-    renderLive();return}
+    $("legend").innerHTML=legendHtml();renderLive();return}
+  if(m=id.match(/^coAlias(\d)$/)){st.coAlias[+m[1]]=t.value;save();return}
+});
+// 하차지를 고치면 걸리는 시간이 비어 있을 때 지역표에서 채움
+document.addEventListener("change",e=>{
+  const m=e.target.id.match(/^r(\d+)place$/);if(!m)return;
+  const r=st.reqs.find(x=>x.id===+m[1]);if(!r||r.drive!=null)return;
+  const d=placeDrive(r.place.split("/")[0]);if(d!=null){r.drive=d;$(`r${r.id}drive`).value=fmtDur(d);renderLive()}
 });
 document.addEventListener("click",e=>{
   const del=e.target.closest("[data-del]");
   if(del){st.reqs=st.reqs.filter(r=>r.id!==+del.dataset.del);buildReqs();renderLive();return}
+  const pd=e.target.closest("[data-pdel]");
+  if(pd){st.places.splice(+pd.dataset.pdel,1);buildPlaces();save();return}
   const nu=e.target.closest("[data-nup]");
   if(nu){const k=+nu.dataset.nup;if(k>0){[st.notes[k-1],st.notes[k]]=[st.notes[k],st.notes[k-1]];buildNotes();renderLive()}return}
   const nd=e.target.closest("[data-ndel]");
@@ -598,25 +693,25 @@ document.addEventListener("click",e=>{
   if(day){st.date=dayStr(+day.dataset.day);$("date").value=st.date;renderLive()}
 });
 $("addPaste").onclick=()=>{
-  const {items,date}=parsePaste($("paste").value);const co=+$("pasteCo").value||0;
-  if(!items.length){toast("읽을 수 있는 줄이 없어요. 예: 5조 2636");return}
   if(st.sample){st.reqs=[];st.sample=false}
-  let added=0,skip=0;
-  for(const it of items){
-    if(st.reqs.some(r=>r.no===it.no&&r.co===co&&r.want===it.want&&r.drive===it.drive&&(r.arr||"")===it.arr)){skip++;continue}
-    st.reqs.push({id:st.seq++,no:it.no,co,want:it.want,drive:it.drive,arr:it.arr,pin:false,late:false});added++;
-  }
-  if(date){const y=(st.date||"").slice(0,4)||String(new Date().getFullYear());st.date=`${y}-${p2(date[0])}-${p2(date[1])}`}
+  const {added,skip,count}=addFromText($("paste").value,+$("pasteCo").value||0);
+  if(!added&&!skip){toast("읽을 수 있는 줄이 없어요. 예: 5조 2636");return}
   $("paste").value="";fillTop();buildReqs();renderLive();
-  toast(`${coName(co)} ${added}대 넣었어요`+(skip?` · 같은 요청 ${skip}줄은 건너뜀`:""));
+  const parts=Object.entries(count).map(([k,v])=>`${coName(+k)} ${v}`).join(" · ");
+  toast((parts?`${parts}대 넣었어요`:"새로 넣은 차가 없어요")+(skip?` · 같은 요청 ${skip}줄은 건너뜀`:""));
 };
 $("clearPaste").onclick=()=>{$("paste").value="";$("paste").focus()};
-$("clearSample").onclick=()=>{st.reqs=[];st.sample=false;st.date=dayStr(1);st.am=st.day=st.pm="";fillTop();buildReqs();renderLive()};
+$("clearSample").onclick=()=>{st.reqs=[];st.sample=false;st.date=dayStr(1);fillTop();buildReqs();renderLive()};
 $("addNote").onclick=()=>{st.notes.push({text:"",on:true});buildNotes();renderLive();$("ntx"+(st.notes.length-1)).focus()};
+$("addPlace").onclick=()=>{st.places.push({name:"",drive:null,alias:""});buildPlaces();$("pn"+(st.places.length-1)).focus()};
 $("copy").onclick=()=>copyText(kakao(assign()),"복사됨 · 카톡에 붙여넣기 하세요");
 $("copyRules").onclick=()=>copyText(rulesText(),"기준 글 복사됨 · 단톡방에 공유해 보세요");
 
-buildStatic();fillTop();buildNotes();buildReqs();bindReqBtns();renderLive();
+// 처음 열었거나 예전 예시(10월 29일)가 남아 있으면 11월 11일 예시로
+if(fresh||st.sample){st.reqs=[];st.seq=1;st.date="2026-11-11";addFromText(SAMPLE_TEXT,0);st.sample=true;
+  if(!st.notes.some(n=>n.on))st.notes[0].on=true}
+if(!st.sample&&(!st.date||st.date<dayStr(1)))st.date=dayStr(1);
+buildStatic();fillTop();buildPlaces();buildNotes();buildReqs();bindReqBtns();renderLive();
 </script>
 </body>
 </html>
