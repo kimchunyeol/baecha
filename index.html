@@ -1055,9 +1055,9 @@ function renderStat(){
   $('#statInfo').textContent=workDays?`${y}년 ${+mo}월 · 배차한 날 ${workDays}일. 한 차가 한 줄에 들어가면 1번으로 세요.`:`${y}년 ${+mo}월에는 배차 기록이 없어요.`;
   const td=v=>`<td class="${v?'':'z'}">${v}</td>`;
   const sum=k=>rows.reduce((s,r)=>s+r[k],0);
-  $('#statTbl').innerHTML=`<thead><tr><th>차번</th><th>기사</th><th>익착</th><th>당착</th><th>상차만</th><th>합계</th><th>운행일</th><th>광진</th><th>외부</th><th>쉼</th></tr></thead><tbody>`+
-    rows.map(r=>`<tr><td>${esc(r.car)}</td><td>${esc(r.name)}</td>${td(r.unload)}${td(r.same)}${td(r.load)}<td class="sum">${r.total}</td>${td(r.days)}${td(r.kj)}${td(r.etc)}${td(r.rest)}</tr>`).join('')+
-    `<tr class="tot"><td>합계</td><td>${rows.length}대</td><td>${sum('unload')}</td><td>${sum('same')}</td><td>${sum('load')}</td><td>${sum('total')}</td><td></td><td>${sum('kj')}</td><td>${sum('etc')}</td><td>${sum('rest')}</td></tr></tbody>`;
+  $('#statTbl').innerHTML=`<thead><tr><th>차번</th><th>기사</th><th>익착</th><th>당착</th><th>상차만</th><th>합계</th><th>광진</th><th>외부</th><th>쉼</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td>${esc(r.car)}</td><td>${esc(r.name)}</td>${td(r.unload)}${td(r.same)}${td(r.load)}<td class="sum">${r.total}</td>${td(r.kj)}${td(r.etc)}${td(r.rest)}</tr>`).join('')+
+    `<tr class="tot"><td>합계</td><td>${rows.length}대</td><td>${sum('unload')}</td><td>${sum('same')}</td><td>${sum('load')}</td><td>${sum('total')}</td><td>${sum('kj')}</td><td>${sum('etc')}</td><td>${sum('rest')}</td></tr></tbody>`;
   $('#xlsBtn').disabled=!workDays;
 }
 $('#statMonth').addEventListener('input',renderStat);
@@ -1084,13 +1084,13 @@ $('#xlsBtn').onclick=async()=>{
     const x=new Date(i.day+'T00:00');
     det.push([i.day,WD[x.getDay()],GN[i.group]||'',KN[i.kind]||'',c,db.drivers[c]||'',i.kind==='unload'?'':(i.item||''),i.kind==='unload'?(i.place||''):(i.kind==='same'?(i.to||''):'')]);
   }));
-  const st=[['차번','기사','익착','당착','상차만','합계','운행일','광진','외부','쉼']];
-  rows.forEach(r=>st.push([r.car,r.name,r.unload,r.same,r.load,r.total,r.days,r.kj,r.etc,r.rest]));
+  const st=[['차번','기사','익착','당착','상차만','합계','광진','외부','쉼']];
+  rows.forEach(r=>st.push([r.car,r.name,r.unload,r.same,r.load,r.total,r.kj,r.etc,r.rest]));
   const b=$('#xlsBtn'); b.textContent='만드는 중…';
   try{
     const X=await loadXLSX(), wb=X.utils.book_new();
     const s1=X.utils.aoa_to_sheet(det); s1['!cols']=[{wch:11},{wch:4},{wch:7},{wch:7},{wch:7},{wch:8},{wch:12},{wch:20}];
-    const s2=X.utils.aoa_to_sheet(st); s2['!cols']=[{wch:7},{wch:8},{wch:6},{wch:6},{wch:7},{wch:6},{wch:8},{wch:6},{wch:5}];
+    const s2=X.utils.aoa_to_sheet(st); s2['!cols']=[{wch:7},{wch:8},{wch:6},{wch:6},{wch:7},{wch:6},{wch:6},{wch:6},{wch:5}];
     X.utils.book_append_sheet(wb,s1,'배차 내역'); X.utils.book_append_sheet(wb,s2,'차량별 횟수');
     X.writeFile(wb,`배차판-${m}.xlsx`);
     $('#statInfo').textContent=`배차판-${m}.xlsx 파일을 받았어요. 다운로드 폴더를 확인하세요.`;
