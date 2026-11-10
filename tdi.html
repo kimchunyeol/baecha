@@ -72,13 +72,16 @@ button.big{padding:11px 18px;font-size:16px}
 .req{display:grid;grid-template-columns:28px 84px minmax(0,1fr) minmax(0,1fr) 32px;gap:6px;padding:8px;border:1px solid var(--line);border-radius:10px;align-items:center}
 .req .ord{grid-row:span 3;align-self:stretch;display:grid;place-items:start center;padding-top:7px;font-size:12px;font-weight:700;font-family:var(--mono);
   color:var(--co);border-right:3px solid var(--co);margin-right:2px}
-.req .drv{grid-column:2 / 4} .req .flags{grid-column:4 / 6}
+.req .drv{grid-column:2 / 3} .req .arr{grid-column:3 / 4} .req .flags{grid-column:4 / 6}
+.req .arr{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);min-width:0}
+.req .arr input{flex:1;min-width:0}
 @media (max-width:520px){
   .req{grid-template-columns:24px minmax(0,1fr) minmax(0,1fr) 34px}
-  .req .ord{grid-row:1 / 5}
+  .req .ord{grid-row:1 / 6}
   .req .no{grid-column:2;grid-row:1} .req .co{grid-column:3;grid-row:1} .req .del{grid-column:4;grid-row:1}
   .req .want{grid-column:2;grid-row:2} .req .drv{grid-column:3 / 5;grid-row:2}
-  .req .flags{grid-column:2 / 5;grid-row:3} .req .res{grid-column:2 / 5;grid-row:4}
+  .req .arr{grid-column:2 / 5;grid-row:3}
+  .req .flags{grid-column:2 / 5;grid-row:4} .req .res{grid-column:2 / 5;grid-row:5}
 }
 .req .flags{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:13px}
 .req .flags label{display:inline-flex;gap:5px;align-items:center;color:var(--muted)}
@@ -166,8 +169,8 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
         <label class="field" style="flex:0 1 180px"><span>어느 회사 글인가요?</span><select id="pasteCo"></select></label>
         <button type="button" class="primary" id="addPaste">요청 목록에 넣기</button>
       </div>
-      <textarea id="paste" rows="6" placeholder="5조 2636&#10;8조 9405. 4746&#10;3611 / 3조 / 5시간&#10;5278 / 4시간30분"></textarea>
-      <p class="hint">"5조 2636", "2636 5조", "8조 : 9405. 4746"은 신청 조로 읽어요. "3611 / 3조 / 5시간"처럼 쓰면 걸리는 시간까지 읽어요. 붙여넣은 순서가 곧 "먼저 올린 순서"입니다.</p>
+      <textarea id="paste" rows="6" placeholder="5조 2636&#10;8조 9405. 4746&#10;3611 / 5시간 / 13시&#10;5278 / 4시간30분"></textarea>
+      <p class="hint">"5조 2636", "2636 5조", "8조 : 9405. 4746"은 신청 조로 읽어요. "3611 / 5시간 / 13시"처럼 쓰면 걸리는 시간과 도착 지정 시간까지 읽어요. 붙여넣은 순서가 곧 "먼저 올린 순서"입니다.</p>
     </section>
 
     <section class="panel sec" aria-label="요청 목록">
@@ -189,6 +192,7 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
       </div>
       <ol class="rules">
         <li><b>고정한 차</b><small>담당자가 직접 정한 자리. 무엇보다 먼저 들어가요.</small></li>
+        <li><b>도착 시간이 정해진 차</b><small>하차지에서 도착 시간을 정해 준 차. 걸리는 시간으로 계산해 그 시간에 맞는 조를 먼저 받아요.</small></li>
         <li><b>신청한 조</b><small>같은 조가 꽉 차면
           <select id="rule" style="width:auto;padding:2px 6px;font-size:13px">
             <option value="first">먼저 올린 차</option>
@@ -288,13 +292,13 @@ const $=id=>document.getElementById(id);
 
 function sample(){
   const R=[];let id=1;
-  const add=(no,co,want,drive=null)=>R.push({id:id++,no,co,want,drive,pin:false,late:false});
+  const add=(no,co,want,drive=null,arr="")=>R.push({id:id++,no,co,want,drive,arr,pin:false,late:false});
   add("2531",1,1);add("1537",1,2);add("3047",1,4);add("2636",1,5);
   add("7622",2,6);add("9405",2,8);add("4746",2,8);add("7489",2,9);
   add("2551",3,10);add("1537",1,12);add("6442",3,12);add("9400",3,13);add("2531",1,16);add("5312",3,17);
-  add("3611",0,null,300);add("4649",0,null,240);add("4693",0,null,300);
+  add("3611",0,null,300,"13:00");add("4649",0,null,240,"13:00");add("4693",0,null,300,"18:00");
   add("5273",0,null,240);add("5278",0,null,270);add("7497",0,null,270);add("7587",0,null,240);
-  add("7600",0,null,120);add("7600",0,null,300);add("5294",0,null,240);
+  add("7600",0,null,120);add("7600",0,null,300,"22:00");add("5294",0,null,240);
   return {reqs:R,seq:id};
 }
 
@@ -313,7 +317,7 @@ if(Array.isArray(st.dests)){
   st.reqs.forEach(r=>{if(r.drive==null&&r.dest){const d=find(r.dest);if(d&&d.drive!=null)r.drive=d.drive}});
   delete st.dests;
 }
-st.reqs.forEach(r=>{delete r.dest;delete r.due;if(r.drive===undefined)r.drive=null});
+st.reqs.forEach(r=>{if(r.arr===undefined)r.arr=r.due||"";delete r.dest;delete r.due;if(r.drive===undefined)r.drive=null});
 if(!["first","far","fair"].includes(st.rule))st.rule="first";
 const DEF_NOTES=[
   "☆점심시간 없이 연속 상차☆",
@@ -345,11 +349,12 @@ function assign(){
   const cap=s=>2-(s===1&&st.jeo?1:0);
   const occ=Array.from({length:N},()=>[]);
   const res=R.map(()=>({slot:null,status:"none",reason:""}));
-  const info=R.map(r=>({d:r.drive??null,w:r.want?r.want-1:null}));
+  const info=R.map(r=>({d:r.drive??null,w:r.want?r.want-1:null,due:r.arr?toMin(r.arr):null}));
   const prev=R.map((r,i)=>{for(let j=i-1;j>=0;j--)if(R[j].no&&R[j].no===r.no)return j;return -1});
   const mm=monthMoved();
-  const grp=R.map((r,i)=>r.pin&&info[i].w!=null?0:info[i].w!=null?2:3);
+  const grp=R.map((r,i)=>r.pin&&info[i].w!=null?0:(info[i].due!=null&&info[i].d!=null)?1:info[i].w!=null?2:3);
   const free=s=>occ[s].length<cap(s);
+  const fits=(i,s)=>{const f=info[i];return f.due==null||f.d==null||arrive(s,f.d)<=f.due};
   // 같은 차 두 번째 탕: 첫 탕 상차 + 왕복 + 휴게 뒤에만
   const es=i=>{const j=prev[i];if(j<0)return -Infinity;const p=res[j].slot;if(p==null)return null;
     const d=info[j].d;return d==null?START[p]+1:START[p]+st.load+2*d+2*restOf(d)};
@@ -357,21 +362,25 @@ function assign(){
   const idx=[...Array(n).keys()].filter(i=>R[i].no);
   const demand=s=>idx.filter(i=>!done.has(i)&&info[i].w===s).length;
   const cmp=(a,b)=>{for(let k=0;k<a.length;k++)if(a[k]!==b[k])return a[k]-b[k];return 0};
-  const G=[0,2,3].map(g=>idx.filter(i=>grp[i]===g));
+  const G=[0,1,2,3].map(g=>idx.filter(i=>grp[i]===g));
+  const feas=i=>{let c=0;for(let s=0;s<N;s++)if(fits(i,s))c++;return c};
+  G[1].sort((a,b)=>cmp([R[a].late?1:0,feas(a),info[a].due,a],[R[b].late?1:0,feas(b),info[b].due,b]));
   const k2=i=>{const late=R[i].late?1:0;
     if(st.rule==="far")return [late,-(info[i].d||0),i];
     if(st.rule==="fair")return [late,-(mm[R[i].co]||0),i];
     return [late,i]};
-  G[1].sort((a,b)=>cmp(k2(a),k2(b)));
+  G[2].sort((a,b)=>cmp(k2(a),k2(b)));
   const hasNext=i=>prev.some(j=>j===i)?0:1; // 두 탕 도는 차의 첫 탕은 먼저
-  G[2].sort((a,b)=>cmp([R[a].late?1:0,hasNext(a),-(info[a].d||0),a],[R[b].late?1:0,hasNext(b),-(info[b].d||0),b]));
+  G[3].sort((a,b)=>cmp([R[a].late?1:0,hasNext(a),-(info[a].d||0),a],[R[b].late?1:0,hasNext(b),-(info[b].d||0),b]));
   const put=(i,s)=>{occ[s].push(i);res[i].slot=s;done.add(i)};
   const firstFrom=e=>{for(let s=0;s<N;s++)if(START[s]>=e)return s+1;return N};
 
   function whyNot(i,w,e){
     if(START[w]<e)return `두 번째 탕이라 ${firstFrom(e)}조부터 가능`;
+    if(!fits(i,w))return `${w+1}조는 도착 ${fmt(info[i].due)}에 늦음`;
     const js=occ[w];
     const pin=js.find(j=>grp[j]===0);if(pin!=null)return `${w+1}조에 고정 차(${R[pin].no})`;
+    const hd=js.find(j=>grp[j]===1);if(hd!=null)return `도착 시간 정해진 차(${R[hd].no}) 우선`;
     if(R[i].late)return "늦게 올린 요청이라 남은 칸으로";
     const o=js.find(j=>grp[j]===2);
     if(o!=null){
@@ -387,7 +396,7 @@ function assign(){
     const f=info[i],e=es(i);
     if(e===null)return false;
     if(grp[i]===0){put(i,f.w);res[i].status="pin";if(occ[f.w].length>cap(f.w))res[i].reason="칸이 넘침";return true}
-    const cand=[];for(let s=0;s<N;s++)if(START[s]>=e&&free(s))cand.push(s);
+    const cand=[];for(let s=0;s<N;s++)if(START[s]>=e&&free(s)&&fits(i,s))cand.push(s);
     if(f.w!=null){
       if(cand.includes(f.w)){put(i,f.w);res[i].status="ok";return true}
       res[i].reason=whyNot(i,f.w,e);
@@ -395,14 +404,15 @@ function assign(){
       cand.sort((a,b)=>Math.abs(a-f.w)-Math.abs(b-f.w)||b-a);
       put(i,cand[0]);res[i].status="moved";return true;
     }
-    if(!cand.length){res[i].status="none";res[i].reason="빈 조가 없어요";done.add(i);return true}
+    if(!cand.length){res[i].status="none";res[i].reason=f.due!=null&&f.d!=null?`도착 ${fmt(f.due)}에 맞는 빈 조가 없어요`:"빈 조가 없어요";done.add(i);return true}
     const sp=cand.filter(s=>occ[s].length+demand(s)<cap(s));
+    if(f.due!=null&&f.d!=null){put(i,(sp.length?sp:cand).at(-1));res[i].status="auto";res[i].reason=`도착 ${fmt(f.due)}에 맞춘 가장 늦은 조`;return true}
     put(i,(sp.length?sp:cand)[0]);res[i].status="auto";
     res[i].reason=e>-Infinity?"두 번째 탕, 가능한 가장 이른 조":f.d!=null?"걸리는 시간 긴 차부터 이른 조":"빈 조 중 가장 이른 조";
     return true;
   }
 
-  let queue=[...G[0],...G[1],...G[2]];
+  let queue=[...G[0],...G[1],...G[2],...G[3]];
   for(let pass=0;pass<5&&queue.length;pass++){
     const next=[];for(const i of queue)if(!placeOne(i))next.push(i);
     if(next.length===queue.length){next.forEach(i=>{res[i].status="none";res[i].reason="첫 탕 자리가 없어요"});break}
@@ -434,9 +444,10 @@ function rulesText(){
   const r2={first:"먼저 올린 차",far:"걸리는 시간이 긴 차",fair:"이번 달 많이 밀린 회사"}[st.rule];
   return ["☆TDI 순번 기준☆",
     "1. 담당자가 고정한 차",
-    `2. 신청한 조 (같은 조가 차면 ${r2} 우선, 밀린 차는 가장 가까운 빈 조)`,
-    "3. 요청 마감 뒤에 올린 요청은 남은 칸",
-    "4. 조 상관없는 차는 걸리는 시간이 긴 차부터 이른 빈 조",
+    "2. 하차지에서 도착 시간을 정해 준 차 (그 시간에 맞는 조 먼저)",
+    `3. 신청한 조 (같은 조가 차면 ${r2} 우선, 밀린 차는 가장 가까운 빈 조)`,
+    "4. 요청 마감 뒤에 올린 요청은 남은 칸",
+    "5. 조 상관없는 차는 걸리는 시간이 긴 차부터 이른 빈 조",
     ...(st.cutoff?[`요청 마감 : ${st.cutoff}`]:[])].join("\n");
 }
 
@@ -458,6 +469,7 @@ function buildReqs(){
       <select class="co" id="r${r.id}co" aria-label="회사">${coOptions(r.co)}</select>
       <select class="want" id="r${r.id}want" aria-label="신청한 조">${wantOptions(r.want)}</select>
       <button type="button" class="small del" data-del="${r.id}" aria-label="${esc(r.no)} 지우기">✕</button>
+      <label class="arr"><span>도착 지정</span><input type="time" id="r${r.id}arr" value="${esc(r.arr||"")}"></label>
       <input class="drv mono" id="r${r.id}drive" aria-label="걸리는 시간" placeholder="걸리는 시간 예: 4:30" value="${esc(fmtDur(r.drive))}">
       <div class="flags">
         <label><input type="checkbox" id="r${r.id}pin"${r.pin?" checked":""}> 고정</label>
@@ -505,7 +517,9 @@ function renderLive(){
     else if(x.status==="moved")h=`<b class="mv">${r.want}조 → ${x.slot+1}조</b> <small>${esc(x.reason)}</small>`;
     else if(x.status==="auto")h=`<b>${x.slot+1}조</b> <small>${esc(x.reason)}</small>`;
     else h=`<b class="late">자리 없음</b> <small>${esc(x.reason)}</small>`;
-    if(x.slot!=null&&f.d!=null)h+=` · ${fmt(arrive(x.slot,f.d))} 도착 예상`;
+    if(x.slot!=null&&f.d!=null){const a=arrive(x.slot,f.d);h+=` · ${fmt(a)} 도착 예상`;
+      if(f.due!=null)h+=a>f.due?` <span class="late">지정 ${fmt(f.due)}보다 ${a-f.due}분 늦음</span>`:` <span class="okc">✓ 지정 ${fmt(f.due)}</span>`}
+    else if(f.due!=null&&f.d==null)h+=` · <span class="late">걸리는 시간을 넣어야 도착 시간을 맞춰요</span>`;
     el.innerHTML=h;
   });
   const last=lastSlot(A);let b="";
@@ -513,7 +527,8 @@ function renderLive(){
     if(s===13)b+=`<div class="divider">저녁시간</div>`;
     const cars=A.occ[s].map(i=>{const r=st.reqs[i],x=A.res[i],f=A.info[i];
       const mk=x.status==="moved"?`<span class="mk">↪${r.want}조</span>`:x.status==="pin"?`<span class="mk">고정</span>`:"";
-      const sm=f.d!=null?`${fmtDur(f.d)} → ${fmt(arrive(s,f.d))}`:"";
+      let sm=f.d!=null?`${fmtDur(f.d)} → ${fmt(arrive(s,f.d))}`:"";
+      if(f.due!=null&&f.d!=null)sm+=arrive(s,f.d)>f.due?` <span class="late">(지정 ${fmt(f.due)})</span>`:` (지정 ${fmt(f.due)})`;
       return `<span class="car"><span class="chip c${r.co}" title="${esc(coName(r.co))}">${esc(r.no)}${mk}</span>${sm?`<small>${sm}</small>`:""}</span>`});
     if(s===1&&st.jeo)cars.push(`<span class="car"><span class="chip jeo">저순도</span></span>`);
     const over=A.occ[s].length>A.cap(s);
@@ -550,14 +565,16 @@ function parsePaste(text){
     if(m=line.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/)){date=[+m[1],+m[2]];continue}
     if(!/^\d{3,}/.test(line)&&(m=line.match(/(\d{1,2})\s*\/\s*(\d{1,2})/))&&!/조/.test(line)){date=[+m[1],+m[2]];continue}
     const drive=driveIn(line);
+    const at=line.replace(/(\d+(?:\.\d+)?)\s*시간/,"").match(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/);
+    const arr=at&&+at[1]<=24?`${p2(+at[1])}:${p2(+at[2]||0)}`:"";
     if(m=line.match(/^(\d{1,2})\s*조\s*[:：]?\s*(.*)$/)){
       const w=+m[1];if(w<1||w>N)continue;
-      (m[2].replace(/(\d+(?:\.\d+)?)\s*시간(?:\s*\d+\s*분)?/,"").match(/\d{4}/g)||[]).forEach(no=>out.push({no,want:w,drive}));continue}
+      (m[2].replace(/(\d+(?:\.\d+)?)\s*시간(?:\s*\d+\s*분)?/,"").match(/\d{4}/g)||[]).forEach(no=>out.push({no,want:w,drive,arr}));continue}
     if(m=line.match(/^([0-9A-Za-z가-힣]+)\s*\/\s*(.+)$/)){
       const t=m[2].match(/(\d{1,2})\s*조/);const w=t?+t[1]:null;
-      out.push({no:m[1],want:w&&w<=N?w:null,drive});continue}
-    if(m=line.match(/^(\d{4})\D+?(\d{1,2})\s*조/)){if(+m[2]<=N)out.push({no:m[1],want:+m[2],drive});continue}
-    if(m=line.match(/^(\d{4})\.?(?:\s|$)/)){out.push({no:m[1],want:null,drive});continue}
+      out.push({no:m[1],want:w&&w<=N?w:null,drive,arr});continue}
+    if(m=line.match(/^(\d{4})\D+?(\d{1,2})\s*조/)){if(+m[2]<=N)out.push({no:m[1],want:+m[2],drive,arr});continue}
+    if(m=line.match(/^(\d{4})\.?(?:\s|$)/)){out.push({no:m[1],want:null,drive,arr});continue}
   }
   return {items:out,date};
 }
@@ -577,18 +594,19 @@ function askIn(areaId,msg,yesLabel,onYes){
   $("cfYes").onclick=()=>{onYes();back()};$("cfNo").onclick=back;
 }
 function bindReqBtns(){
-  $("addOne").onclick=()=>{st.reqs.push({id:st.seq++,no:"",co:+$("pasteCo").value||0,want:null,drive:null,pin:false,late:false});buildReqs();renderLive();$(`r${st.seq-1}no`).focus()};
+  $("addOne").onclick=()=>{st.reqs.push({id:st.seq++,no:"",co:+$("pasteCo").value||0,want:null,drive:null,arr:"",pin:false,late:false});buildReqs();renderLive();$(`r${st.seq-1}no`).focus()};
   $("clearReqs").onclick=()=>askIn("reqBtns","요청을 모두 지울까요?","모두 지우기",()=>{st.reqs=[];buildReqs();renderLive()});
 }
 
 document.addEventListener("input",e=>{
   const t=e.target,id=t.id;let m;
-  if(m=id.match(/^r(\d+)(no|co|want|drive|pin|late)$/)){
+  if(m=id.match(/^r(\d+)(no|co|want|drive|arr|pin|late)$/)){
     const r=st.reqs.find(x=>x.id===+m[1]);if(!r)return;const k=m[2];
     if(k==="pin"||k==="late")r[k]=t.checked;
     else if(k==="co"){r.co=+t.value;$(`row${r.id}`).className=`req c${r.co}`}
     else if(k==="want")r.want=t.value?+t.value:null;
     else if(k==="drive")r.drive=parseDur(t.value);
+    else if(k==="arr")r.arr=t.value;
     else r[k]=t.value.trim();
     if(k==="no")$("reqCount").textContent=st.reqs.filter(x=>x.no).length;
     st.sample=false;renderLive();return;
@@ -624,8 +642,8 @@ $("addPaste").onclick=()=>{
   if(st.sample){st.reqs=[];st.sample=false}
   let added=0,skip=0;
   for(const it of items){
-    if(st.reqs.some(r=>r.no===it.no&&r.co===co&&r.want===it.want&&r.drive===it.drive)){skip++;continue}
-    st.reqs.push({id:st.seq++,no:it.no,co,want:it.want,drive:it.drive,pin:false,late:false});added++;
+    if(st.reqs.some(r=>r.no===it.no&&r.co===co&&r.want===it.want&&r.drive===it.drive&&(r.arr||"")===it.arr)){skip++;continue}
+    st.reqs.push({id:st.seq++,no:it.no,co,want:it.want,drive:it.drive,arr:it.arr,pin:false,late:false});added++;
   }
   if(date){const y=(st.date||"").slice(0,4)||String(new Date().getFullYear());st.date=`${y}-${p2(date[0])}-${p2(date[1])}`}
   $("paste").value="";fillTop();buildReqs();renderLive();
