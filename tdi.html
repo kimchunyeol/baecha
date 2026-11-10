@@ -197,7 +197,6 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
           <select id="rule" style="width:auto;padding:2px 6px;font-size:13px">
             <option value="first">먼저 올린 차</option>
             <option value="far">걸리는 시간이 긴 차</option>
-            <option value="fair">이번 달 많이 밀린 회사</option>
           </select> 우선. 밀린 차는 가장 가까운 빈 조로 가요.</small></li>
         <li><b>늦게 올린 요청</b><small>요청 마감 뒤에 올린 차는 남은 칸으로.</small></li>
         <li><b>조 상관없는 차</b><small>걸리는 시간이 긴 차부터 이른 빈 조로.</small></li>
@@ -253,17 +252,6 @@ td .bar{display:inline-block;height:6px;border-radius:3px;background:var(--co);v
       </div>
     </section>
 
-    <section class="panel sec" aria-label="회사별 기록">
-      <div class="head">
-        <p class="label">이번 달 회사별 기록 · <span id="histMonth"></span></p>
-        <button type="button" class="small primary" id="saveDay">이 날 배차 확정</button>
-      </div>
-      <div class="tablebox"><table>
-        <thead><tr><th>회사</th><th>원하는 조 요청</th><th>그대로 받음</th><th>밀림</th></tr></thead>
-        <tbody id="histBody"></tbody>
-      </table></div>
-      <p class="hint" id="histHint"></p>
-    </section>
   </div>
 </div>
 <textarea id="fallback" aria-hidden="true" tabindex="-1"></textarea>
@@ -318,7 +306,7 @@ if(Array.isArray(st.dests)){
   delete st.dests;
 }
 st.reqs.forEach(r=>{if(r.arr===undefined)r.arr=r.due||"";delete r.dest;delete r.due;if(r.drive===undefined)r.drive=null});
-if(!["first","far","fair"].includes(st.rule))st.rule="first";
+if(!["first","far"].includes(st.rule))st.rule="first";
 const DEF_NOTES=[
   "☆점심시간 없이 연속 상차☆",
   "☆한타임에 평균 50분 예상\n당일 염산 나오는 속도에 따라 입차 시간이 2분~5분씩 늘어지거나 당겨질 수 있으니 10분 전에 미리 대기☆",
@@ -330,19 +318,13 @@ const DEF_NOTES=[
 if(!Array.isArray(st.notes)){st.notes=DEF_NOTES.map(t=>({text:t,on:false}));
   const k=st.notes.findIndex(n=>n.text===(st.note||"").trim());if(k>=0){st.notes[k].on=true;st.note=""}}
 if(!st.sample&&(!st.date||st.date<dayStr(1)))st.date=dayStr(1);
-let hist={};try{hist=JSON.parse(localStorage.getItem(HKEY))||{}}catch(e){hist={}}
+try{localStorage.removeItem(HKEY)}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
-const saveHist=()=>{try{localStorage.setItem(HKEY,JSON.stringify(hist))}catch(e){}};
 const coName=k=>st.cos[k]||`회사${k+1}`;
 
 /* ---------- 계산 ---------- */
 const restOf=d=>d==null||d<=0?0:(st.restMode==="per2h"?Math.floor(d/120)*st.rest:st.rest);
 const arrive=(s,d)=>START[s]+st.load+d+restOf(d);
-function monthMoved(){
-  const ym=(st.date||"").slice(0,7),m=[0,0,0,0];
-  for(const [d,rec] of Object.entries(hist)){if(d.slice(0,7)!==ym||d===st.date)continue;rec.forEach((c,k)=>m[k]+=c.moved||0)}
-  return m;
-}
 
 function assign(){
   const R=st.reqs,n=R.length;
@@ -351,7 +333,6 @@ function assign(){
   const res=R.map(()=>({slot:null,status:"none",reason:""}));
   const info=R.map(r=>({d:r.drive??null,w:r.want?r.want-1:null,due:r.arr?toMin(r.arr):null}));
   const prev=R.map((r,i)=>{for(let j=i-1;j>=0;j--)if(R[j].no&&R[j].no===r.no)return j;return -1});
-  const mm=monthMoved();
   const grp=R.map((r,i)=>r.pin&&info[i].w!=null?0:(info[i].due!=null&&info[i].d!=null)?1:info[i].w!=null?2:3);
   const free=s=>occ[s].length<cap(s);
   const fits=(i,s)=>{const f=info[i];return f.due==null||f.d==null||arrive(s,f.d)<=f.due};
@@ -367,7 +348,6 @@ function assign(){
   G[1].sort((a,b)=>cmp([R[a].late?1:0,feas(a),info[a].due,a],[R[b].late?1:0,feas(b),info[b].due,b]));
   const k2=i=>{const late=R[i].late?1:0;
     if(st.rule==="far")return [late,-(info[i].d||0),i];
-    if(st.rule==="fair")return [late,-(mm[R[i].co]||0),i];
     return [late,i]};
   G[2].sort((a,b)=>cmp(k2(a),k2(b)));
   const hasNext=i=>prev.some(j=>j===i)?0:1; // 두 탕 도는 차의 첫 탕은 먼저
@@ -385,7 +365,6 @@ function assign(){
     const o=js.find(j=>grp[j]===2);
     if(o!=null){
       if(st.rule==="far"&&(info[o].d||0)>(info[i].d||0))return `더 먼 ${R[o].no}(${fmtDur(info[o].d)}) 우선`;
-      if(st.rule==="fair"&&(mm[R[o].co]||0)>(mm[R[i].co]||0))return `이번 달 더 많이 밀린 ${coName(R[o].co)} 우선`;
       return `먼저 올린 ${R[o].no} 우선`;
     }
     if(w===1&&st.jeo)return "2조는 저순도 자리";
@@ -441,7 +420,7 @@ function kakao(A){
 }
 
 function rulesText(){
-  const r2={first:"먼저 올린 차",far:"걸리는 시간이 긴 차",fair:"이번 달 많이 밀린 회사"}[st.rule];
+  const r2={first:"먼저 올린 차",far:"걸리는 시간이 긴 차"}[st.rule];
   return ["☆TDI 순번 기준☆",
     "1. 담당자가 고정한 차",
     "2. 하차지에서 도착 시간을 정해 준 차 (그 시간에 맞는 조 먼저)",
@@ -451,11 +430,6 @@ function rulesText(){
     ...(st.cutoff?[`요청 마감 : ${st.cutoff}`]:[])].join("\n");
 }
 
-function dayStats(A){
-  const s=[0,1,2,3].map(()=>({want:0,got:0,moved:0}));
-  st.reqs.forEach((r,i)=>{if(!r.no||!r.want||r.pin)return;const c=s[r.co];if(!c)return;c.want++;if(A.res[i].status==="ok")c.got++;else c.moved++});
-  return s;
-}
 
 /* ---------- 화면 만들기 ---------- */
 function coOptions(sel){return st.cos.map((c,k)=>`<option value="${k}"${k===sel?" selected":""}>${esc(c)}</option>`).join("")}
@@ -538,23 +512,10 @@ function renderLive(){
   $("jeoHint").textContent=st.jeo?"2조는 차 1대 + 저순도예요.":"저순도 없음: 2조도 차 2대가 들어가는 일반 조예요.";
   $("out").textContent=kakao(A);
   $("formula").textContent=`도착 예상 = 조 시간 + 상차 ${st.load}분 + 걸리는 시간 + 휴게 ${st.rest}분`+(st.restMode==="per2h"?" (2시간마다)":"");
-  renderHist(A);
   save();
   return A;
 }
 
-function renderHist(A){
-  const ym=(st.date||"").slice(0,7);
-  const sum=[0,1,2,3].map(()=>({want:0,got:0,moved:0}));let days=0;
-  for(const [d,rec] of Object.entries(hist)){if(d.slice(0,7)!==ym)continue;days++;rec.forEach((c,k)=>{sum[k].want+=c.want;sum[k].got+=c.got;sum[k].moved+=c.moved})}
-  const maxMv=Math.max(1,...sum.map(c=>c.moved));
-  $("histBody").innerHTML=st.cos.map((c,k)=>`<tr class="c${k}"><td><span class="chip c${k}" style="font-family:var(--sans);font-size:12px">${esc(c)}</span></td>
-    <td>${sum[k].want}</td><td>${sum[k].got}</td><td>${sum[k].moved}<span class="bar" style="width:${Math.round(sum[k].moved/maxMv*40)}px"></span></td></tr>`).join("");
-  $("histMonth").textContent=ym?`${+ym.slice(5)}월`:"";
-  const saved=!!hist[st.date];
-  $("saveDay").textContent=saved?"다시 확정":"이 날 배차 확정";
-  $("histHint").textContent=`확정한 날 ${days}일 기준이에요.`+(saved?" 이 날짜는 이미 확정돼 있어요.":" 카톡에 올린 뒤 '확정'을 누르면 이 날 결과가 기록돼요.")+" 기록은 이 휴대폰 브라우저에 저장됩니다.";
-}
 
 /* ---------- 붙여넣기 읽기 ---------- */
 function driveIn(line){const t=line.match(/(\d+(?:\.\d+)?)\s*시간(?:\s*(\d+)\s*분)?/);return t?Math.round(+t[1]*60)+(+t[2]||0):null}
@@ -654,8 +615,6 @@ $("clearSample").onclick=()=>{st.reqs=[];st.sample=false;st.date=dayStr(1);st.am
 $("addNote").onclick=()=>{st.notes.push({text:"",on:true});buildNotes();renderLive();$("ntx"+(st.notes.length-1)).focus()};
 $("copy").onclick=()=>copyText(kakao(assign()),"복사됨 · 카톡에 붙여넣기 하세요");
 $("copyRules").onclick=()=>copyText(rulesText(),"기준 글 복사됨 · 단톡방에 공유해 보세요");
-$("saveDay").onclick=()=>{if(!st.date){toast("날짜를 먼저 넣어 주세요");return}
-  hist[st.date]=dayStats(assign());saveHist();renderLive();toast(`${dateText(st.date)} 기록 저장`)};
 
 buildStatic();fillTop();buildNotes();buildReqs();bindReqBtns();renderLive();
 </script>
