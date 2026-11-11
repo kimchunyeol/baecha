@@ -369,7 +369,8 @@ function placeClose(text){
       const d=toMin(p.close)-(p.work||0);if(due==null||d<due)due=d}}
   return due;
 }
-const placeDrive=t=>{const p=findPlace(t);return p&&p.drive!=null?p.drive:null};
+// 여러 곳에 내리면("파주에너지+수처리") 그중 가장 먼 곳 기준
+const placeDrive=t=>{let best=null;for(const part of String(t||"").split("+")){const p=findPlace(part);if(p&&p.drive!=null&&(best==null||p.drive>best))best=p.drive}return best};
 
 /* ---------- 붙여넣기 읽기 ---------- */
 function findCo(line){
