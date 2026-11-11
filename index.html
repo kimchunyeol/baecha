@@ -1053,12 +1053,12 @@ function monthStat(m){
 function renderStat(){
   const m=$('#statMonth').value||cur.slice(0,7), {rows,workDays}=monthStat(m);
   const [y,mo]=m.split('-');
-  $('#statInfo').textContent=workDays?`${y}년 ${+mo}월 · 운행일보처럼 실은 날 기준으로 세요. 상차 횟수는 당착+상차만, 운행일은 실은 날짜 수예요. 익착은 전날 실은 짐을 내린 것이라 따로 보여만 줘요.`:`${y}년 ${+mo}월에는 배차 기록이 없어요.`;
+  $('#statInfo').textContent=workDays?`${y}년 ${+mo}월 · 운행일보처럼 실은 날 기준으로 세요. 상차 횟수는 당착+상차만, 운행일은 실은 날짜 수예요. 익착(전날 실은 짐을 내린 것)은 실은 달에 이미 셌으니 넣지 않아요.`:`${y}년 ${+mo}월에는 배차 기록이 없어요.`;
   const td=v=>`<td class="${v?'':'z'}">${v}</td>`;
   const sum=k=>rows.reduce((s,r)=>s+r[k],0);
-  $('#statTbl').innerHTML=`<thead><tr><th>차번</th><th>기사</th><th>당착</th><th>상차만</th><th>상차 횟수</th><th>운행일</th><th>광진</th><th>외부</th><th>익착(내림)</th><th>쉼</th></tr></thead><tbody>`+
-    rows.map(r=>`<tr><td>${esc(r.car)}</td><td>${esc(r.name)}</td>${td(r.same)}${td(r.load)}<td class="sum">${r.total}</td>${td(r.days)}${td(r.kj)}${td(r.etc)}${td(r.unload)}${td(r.rest)}</tr>`).join('')+
-    `<tr class="tot"><td>합계</td><td>${rows.length}대</td><td>${sum('same')}</td><td>${sum('load')}</td><td>${sum('total')}</td><td>${sum('days')}</td><td>${sum('kj')}</td><td>${sum('etc')}</td><td>${sum('unload')}</td><td>${sum('rest')}</td></tr></tbody>`;
+  $('#statTbl').innerHTML=`<thead><tr><th>차번</th><th>기사</th><th>당착</th><th>상차만</th><th>상차 횟수</th><th>운행일</th><th>광진</th><th>외부</th><th>쉼</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td>${esc(r.car)}</td><td>${esc(r.name)}</td>${td(r.same)}${td(r.load)}<td class="sum">${r.total}</td>${td(r.days)}${td(r.kj)}${td(r.etc)}${td(r.rest)}</tr>`).join('')+
+    `<tr class="tot"><td>합계</td><td>${rows.length}대</td><td>${sum('same')}</td><td>${sum('load')}</td><td>${sum('total')}</td><td>${sum('days')}</td><td>${sum('kj')}</td><td>${sum('etc')}</td><td>${sum('rest')}</td></tr></tbody>`;
   $('#xlsBtn').disabled=!workDays;
 }
 $('#statMonth').addEventListener('input',renderStat);
@@ -1085,13 +1085,13 @@ $('#xlsBtn').onclick=async()=>{
     const x=new Date(i.day+'T00:00');
     det.push([i.day,WD[x.getDay()],GN[i.group]||'',KN[i.kind]||'',c,db.drivers[c]||'',i.kind==='unload'?'':(i.item||''),i.kind==='unload'?(i.place||''):(i.kind==='same'?(i.to||''):'')]);
   }));
-  const st=[['차번','기사','당착','상차만','상차 횟수','운행일','광진','외부','익착(내림)','쉼']];
-  rows.forEach(r=>st.push([r.car,r.name,r.same,r.load,r.total,r.days,r.kj,r.etc,r.unload,r.rest]));
+  const st=[['차번','기사','당착','상차만','상차 횟수','운행일','광진','외부','쉼']];
+  rows.forEach(r=>st.push([r.car,r.name,r.same,r.load,r.total,r.days,r.kj,r.etc,r.rest]));
   const b=$('#xlsBtn'); b.textContent='만드는 중…';
   try{
     const X=await loadXLSX(), wb=X.utils.book_new();
     const s1=X.utils.aoa_to_sheet(det); s1['!cols']=[{wch:11},{wch:4},{wch:7},{wch:7},{wch:7},{wch:8},{wch:12},{wch:20}];
-    const s2=X.utils.aoa_to_sheet(st); s2['!cols']=[{wch:7},{wch:8},{wch:6},{wch:7},{wch:9},{wch:7},{wch:6},{wch:6},{wch:9},{wch:5}];
+    const s2=X.utils.aoa_to_sheet(st); s2['!cols']=[{wch:7},{wch:8},{wch:6},{wch:7},{wch:9},{wch:7},{wch:6},{wch:6},{wch:5}];
     X.utils.book_append_sheet(wb,s1,'배차 내역'); X.utils.book_append_sheet(wb,s2,'차량별 횟수');
     X.writeFile(wb,`배차판-${m}.xlsx`);
     $('#statInfo').textContent=`배차판-${m}.xlsx 파일을 받았어요. 다운로드 폴더를 확인하세요.`;
