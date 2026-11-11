@@ -286,7 +286,7 @@ const DEF_COS=["한정특수","한익스","혜성","비봉"];
 const DEF_ALIAS=["한정","한화","",""];
 // 처음 값은 거리로 잡은 대략의 시간 (TDI → 하차지)
 const DEF_PLACES=[
-  ["금성",300,""],["한수",240,""],["익산",120,"창대"],["대죽",270,"KCC"],["당진",240,"삼주, 광진"],
+  ["금성",300,""],["한수",240,""],["익산",120,"창대"],["대죽",270,"KCC"],["당진",240,"광진"],["삼주당진",240,"","20:00",0],
   ["포항",240,"대경"],["영천",210,""],["진천",240,"수정"],["충주",270,"천보"],["인천",300,"이영"],
   ["시흥",270,""],["화성",240,""],["부산",180,""],["나주",90,""],["울산",180,""],["군산",180,""],["코솔텍",240,""],
   ["파주",330,""],["대구",180,""],["GS칼텍스",30,"GS"],["코리아써키트",270,"코리아, 이미지, 수처리, 안산","17:30",120],["에코파크",150,"정읍"]
@@ -340,6 +340,8 @@ if(!Array.isArray(st.places))st.places=structuredClone(DEF_PLACES);
 DEF_PLACES.forEach(d=>{if(!st.places.some(p=>norm(p.name)===norm(d.name)))st.places.push({...d})});
 st.places.forEach(p=>{if(p.close===undefined)p.close="";if(p.work===undefined)p.work=null});
 {const u=st.places.find(p=>p.name==="울산");if(u&&u.drive===210)u.drive=180}
+// 삼주 당진공장은 따로 (20시 마감)
+{const dj=st.places.find(p=>p.name==="당진");if(dj&&/삼주/.test(dj.alias||""))dj.alias=dj.alias.replace(/삼주\s*,?\s*/,"").trim()}
 // 코리아2공장 = 안산 코리아써키트 (이미지도 같은 곳), 4:30
 {const k=st.places.find(p=>p.name==="코리아2공장");if(k){Object.assign(k,{name:"코리아써키트",alias:"코리아, 이미지, 수처리, 안산"});if(k.drive==null)k.drive=270}
  const dup=st.places.filter(p=>p.name==="코리아써키트");if(dup.length>1)st.places.splice(st.places.lastIndexOf(dup[1]),1);
