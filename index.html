@@ -1184,7 +1184,10 @@ const Sync={on:false,fs:null,ref:null,last:{},lastSet:'',timer:null,unsub:[],fro
 const dayJSON=d=>JSON.stringify({items:db.items.filter(i=>i.day===d),rest:restOf(d)});
 const setJSON=()=>JSON.stringify({fleet:db.fleet||[],drivers:db.drivers||{},hol:db.hol||{},fleetSeeded:db.fleetSeeded||0});
 function allDays(){return new Set([...db.items.map(i=>i.day),...Object.keys(db.rest||{})])}
-function syncState(cls,txt){const s=$('#sync');s.hidden=false;s.className='sync '+cls;$('#syncTxt').textContent=txt}
+function showFresh(cache){if(!Sync.on)return;const d=new Date();syncState(cache?'busy':'on',cache?'다시 연결 중…':'연동됨')}
+function syncState(cls,txt){const s=$('#sync');s.hidden=false;s.className='sync '+cls;
+  if(cls==='on'){Sync.seen=new Date();txt+=' · '+z(Sync.seen.getHours())+':'+z(Sync.seen.getMinutes())+' 확인'}
+  $('#syncTxt').textContent=txt}
 
 // 저장할 때마다 바뀐 날짜만 올림
 const _save=save;
@@ -1211,7 +1214,7 @@ function pushChanges(){
   if(!n)return;
   syncState('busy','저장 중…');
   const sent=Object.keys(db.pend);
-  b.commit().then(()=>{sent.forEach(d=>delete db.pend[d]);_save();syncState('on','연동됨')}).catch(err=>{syncState('off','저장 안 됨');console.error(err);
+  b.commit().then(()=>{sent.forEach(d=>delete db.pend[d]);_save();showFresh(false)}).catch(err=>{syncState('off','저장 안 됨');console.error(err);
     if(err&&err.code==='permission-denied')showGate('이 계정은 배차판을 쓸 수 없어요. 허락된 구글 계정으로 다시 로그인하세요.')});
 }
 // 다른 기기에서 바뀐 것 받기
@@ -1255,7 +1258,8 @@ async function startSync(user){
         if(!a){a=true; if(!first){if(doc.exists)applySettings(doc.data());else Sync.lastSet=''} done(); return}
         if(applySettings(doc.data())){_save();render()}
       },no));
-      Sync.unsub.push(days.where(ID,'>=',Sync.from).onSnapshot(snap=>{
+      Sync.unsub.push(days.where(ID,'>=',Sync.from).onSnapshot({includeMetadataChanges:true},snap=>{
+        if(b)showFresh(snap.metadata.fromCache);
         if(!b){
           b=true;
           if(!first){const ids=new Set(snap.docs.map(d=>d.id));
@@ -1265,10 +1269,10 @@ async function startSync(user){
         }
         let ch=false; snap.docChanges().forEach(c=>{if(c.doc.metadata.hasPendingWrites)return;ch=applyDay(c.doc.id,c.type==='removed'?null:c.doc.data())||ch});
         if(ch){_save();render()}
-      },err=>{if(!b)no(err);else syncState('off','연결 끊김')}));
+      },err=>{if(!b)no(err);else{syncState('off','연결 끊김 · 다시 연결 중');setTimeout(()=>restartSync(),5000)}}));
     });
     db.syncedTo=FB_CFG.projectId; Sync.on=true; _save(); render(); pushChanges();
-    syncState('on','연동됨');
+    showFresh(false);
   }catch(err){
     console.error(err); stopSync();
     if(err&&err.code==='permission-denied')showGate('이 계정은 배차판을 쓸 수 없어요. 허락된 구글 계정으로 다시 로그인하세요.');
@@ -1284,7 +1288,7 @@ function loadOld(){
   Sync.oldLoading=Sync.ref.collection('days').where(ID,'<',Sync.from).get().then(qs=>{
     const ids=new Set(); qs.forEach(doc=>{ids.add(doc.id);applyDay(doc.id,doc.data())});
     allDays().forEach(d=>{if(d<Sync.from&&!ids.has(d)&&!db.pend[d]){db.items=db.items.filter(i=>i.day!==d);delete db.rest[d]}});
-    Sync.oldLoaded=true; _save(); render(); syncState('on','연동됨');
+    Sync.oldLoaded=true; _save(); render(); showFresh(false);
   }).catch(err=>{console.error(err);syncState('off','지난 기록 못 불러옴')}).finally(()=>{Sync.oldLoading=null});
   return Sync.oldLoading;
 }
@@ -1302,7 +1306,32 @@ let localOnly=false; try{localOnly=localStorage.getItem('baecha-local')==='1'}ca
   try{await firebase.firestore().enablePersistence({synchronizeTabs:true})}catch(e){}
   const auth=firebase.auth();
   auth.getRedirectResult().catch(err=>showGate('로그인에 실패했어요. 다시 눌러 주세요.'));
-  window.addEventListener('online',()=>{if(auth.currentUser&&!Sync.on&&!Sync.starting){Sync.starting=1;startSync(auth.currentUser).finally(()=>Sync.starting=0)}});
+  window.addEventListener('online',()=>restartSync());
+  // 태블릿·휴대폰이 잠들었다 깨면(화면 켜짐, 탭으로 돌아옴) 서버에서 최신 배차를 다시 받아옴
+  window.restartSync=()=>{if(!auth.currentUser||Sync.starting)return;stopSync();Sync.starting=1;startSync(auth.currentUser).finally(()=>Sync.starting=0)};
+  let hiddenAt=0;
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){hiddenAt=Date.now();return}
+    if(auth.currentUser&&(!Sync.on||Date.now()-hiddenAt>20000))refreshNow();
+  });
+  window.addEventListener('pageshow',e=>{if(e.persisted&&auth.currentUser)refreshNow()});
+  // 화면을 켜 둔 채로도 1분마다 연결이 살아 있는지 확인
+  setInterval(()=>{if(!document.hidden&&auth.currentUser&&Sync.on&&Sync.seen&&Date.now()-Sync.seen>60000)refreshNow()},30000);
+  window.refreshNow=async()=>{
+    if(!Sync.on){restartSync();return}
+    try{
+      syncState('busy','최신 배차 확인 중…');
+      const ID=firebase.firestore.FieldPath.documentId(), days=Sync.ref.collection('days');
+      const [sd,qs]=await Promise.all([Sync.ref.get({source:'server'}),days.where(ID,'>=',Sync.from).get({source:'server'})]);
+      let ch=false; const ids=new Set();
+      qs.forEach(doc=>{ids.add(doc.id);ch=applyDay(doc.id,doc.data())||ch});
+      allDays().forEach(d=>{if(d>=Sync.from&&!ids.has(d)&&!db.pend[d]&&Sync.last[d]!==undefined){ch=applyDay(d,null)||ch}});
+      if(sd.exists)ch=applySettings(sd.data())||ch;
+      if(ch){_save();render()}
+      syncState('on','연동됨');
+    }catch(err){console.error(err);restartSync()}
+  };
+  window.addEventListener('focus',()=>{if(auth.currentUser&&Sync.seen&&Date.now()-Sync.seen>60000)refreshNow()});
   auth.onAuthStateChanged(user=>{
     stopSync();
     if(user){$('#gate').hidden=true;localOnly=false;try{localStorage.removeItem('baecha-local')}catch(e){}
