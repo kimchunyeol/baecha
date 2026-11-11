@@ -204,7 +204,7 @@ summary{cursor:pointer;font-weight:500;font-size:14px}
       <details>
         <summary>지역별 걸리는 시간</summary>
         <div class="sec" style="margin-top:10px">
-          <p class="hint">TDI에서 하차지까지 걸리는 시간이에요. 처음 값은 거리로 대충 잡은 거라 실제 시간으로 고쳐 주세요. "다른 이름"에 거래처 이름을 쉼표로 넣으면(예: 수정, 천보) 그 이름으로도 찾아요. 하차 마감을 넣으면 마감 안에 작업이 끝나도록 도착 시간을 잡아요(늦으면 안 되는 시간이라 여유를 안 줘요). 작업 시간은 비워 두면 한 곳당 1시간이고, "A+B"처럼 여러 곳에 내리면 들르는 곳마다 작업 시간을 더해요.</p>
+          <p class="hint">TDI에서 하차지까지 걸리는 시간이에요. 처음 값은 거리로 대충 잡은 거라 실제 시간으로 고쳐 주세요. "다른 이름"에 거래처 이름을 쉼표로 넣으면(예: 수정, 천보) 그 이름으로도 찾아요. 하차 마감을 넣으면 마감 안에 작업이 끝나도록 도착 시간을 잡아요(늦으면 안 되는 시간이라 여유를 안 줘요). 작업 시간은 비워 두면 한 곳에 다 내릴 때 1시간, "A+B"처럼 나눠 넣을 때는 한 곳당 30분으로 계산해요.</p>
           <div class="ptab" id="ptab"></div>
           <div class="btns"><button type="button" class="small" id="addPlace">지역 추가</button></div>
         </div>
@@ -221,7 +221,8 @@ summary{cursor:pointer;font-weight:500;font-size:14px}
             <label class="field"><span>상차 걸리는 시간 (분)</span><input id="load" type="number" min="0" step="5"></label>
             <label class="field"><span>휴게 (분)</span><input id="rest" type="number" min="0" step="5"></label>
             <label class="field"><span>도착 여유 (분)</span><input id="slack" type="number" min="0" step="10"></label>
-            <label class="field"><span>하차 작업, 한 곳당 (분)</span><input id="workPer" type="number" min="0" step="10"></label>
+            <label class="field"><span>하차 작업, 한 곳 (분)</span><input id="workPer" type="number" min="0" step="10"></label>
+            <label class="field"><span>나눠 넣을 때 한 곳당 (분)</span><input id="splitWork" type="number" min="0" step="10"></label>
             <label class="field"><span>휴게 넣는 방식</span>
               <select id="restMode"><option value="once">한 번만</option><option value="per2h">2시간 운전마다</option></select></label>
           </div>
@@ -290,7 +291,7 @@ const DEF_PLACES=[
   ["금성",300,""],["한수",240,""],["익산",120,"창대"],["대죽",270,"KCC"],["당진",240,"광진"],["삼주당진",240,"","20:00",null],
   ["포항",240,"대경"],["영천",210,""],["진천",240,"수정"],["충주",270,"천보"],["인천",300,"이영"],
   ["시흥",270,""],["화성",240,""],["부산",180,""],["나주",90,""],["울산",180,""],["군산",180,""],["코솔텍",240,""],
-  ["파주",330,""],["대구",180,""],["GS칼텍스",30,"GS"],["코리아써키트",270,"코리아, 이미지, 수처리, 안산","17:30",null],["에코파크",150,"정읍"]
+  ["파주",330,""],["대구",180,""],["GS칼텍스",30,"GS"],["코리아써키트",270,"코리아, 이미지, 수처리, 안산","17:30",120],["에코파크",150,"정읍"]
 ].map(([name,drive,alias,close="",work=null])=>({name,drive,alias,close,work}));
 const DEF_NOTES=[
   "☆점심시간 없이 연속 상차☆",
@@ -340,7 +341,8 @@ if(!Array.isArray(st.places))st.places=structuredClone(DEF_PLACES);
 // 새로 알게 된 지역은 빠져 있으면 추가, 울산은 3:30 → 3:00 (11/12 실제 순번 기준)
 DEF_PLACES.forEach(d=>{if(!st.places.some(p=>norm(p.name)===norm(d.name)))st.places.push({...d})});
 st.places.forEach(p=>{if(p.close===undefined)p.close="";if(p.work===undefined)p.work=null;
-  if((p.name==="코리아써키트"&&p.work===120)||(p.name==="삼주당진"&&p.work===0))p.work=null});   // 한 곳당 1시간 기본값으로
+  if(p.name==="삼주당진"&&p.work===0)p.work=null;
+  if(p.name==="코리아써키트"&&p.work==null)p.work=120});   // 코리아써키트는 작업이 힘들어 2시간
 {const u=st.places.find(p=>p.name==="울산");if(u&&u.drive===210)u.drive=180}
 // 삼주 당진공장은 따로 (20시 마감)
 {const dj=st.places.find(p=>p.name==="당진");if(dj&&/삼주/.test(dj.alias||""))dj.alias=dj.alias.replace(/삼주\s*,?\s*/,"").trim()}
@@ -352,6 +354,7 @@ delete st.dests;
 if(!["first","far"].includes(st.rule))st.rule="first";
 if(st.slack==null)st.slack=120;
 if(st.workPer==null)st.workPer=60;
+if(st.splitWork==null)st.splitWork=30;
 if(!Array.isArray(st.notes)){st.notes=DEF_NOTES.map(t=>({text:t,on:false}));
   const k=st.notes.findIndex(n=>n.text===(st.note||"").trim());if(k>=0){st.notes[k].on=true;st.note=""}}
 st.reqs.forEach(r=>{if(r.early===undefined)r.early=/2차 다른 곳/.test(r.place||"");r.place=(r.place||"").replace(" (2차 다른 곳 상차)","");if(r.arr===undefined)r.arr=r.due||"";if(r.place===undefined)r.place=r.dest||"";delete r.dest;delete r.due;if(r.drive===undefined)r.drive=null});
@@ -367,18 +370,20 @@ function findPlace(text){
   }
   return best;
 }
+// 여러 곳에 나눠 넣는지: "+"로 나뉜 곳 중 서로 다른 지역 수
+const stopsOf=t=>{const seen=new Set();String(t||"").split("+").forEach(x=>{const p=findPlace(x);seen.add(p?p.name:norm(x))});seen.delete("");return Math.max(1,seen.size)};
 function placeClose(text){
-  const n=norm(text);if(!n)return null;let due=null;
+  const n=norm(text);if(!n)return null;let due=null;const split=stopsOf(text)>1;
   for(const p of st.places){if(!p.close)continue;
     if([p.name,...(p.alias||"").split(",")].some(nm=>{const k=norm(nm);return k&&n.includes(k)})){
-      const d=toMin(p.close)-(p.work??st.workPer);if(due==null||d<due)due=d}}
+      const d=toMin(p.close)-(p.work??(split?st.splitWork:st.workPer));if(due==null||d<due)due=d}}
   return due;
 }
 // 여러 곳에 내리면("파주에너지+수처리") 그중 가장 먼 곳 기준
-// 들르는 곳이 늘 때마다 하차 작업 시간(한 곳당 기본 1시간)을 더함
-const placeDrive=t=>{const parts=String(t||"").split("+").filter(x=>x.trim());let best=null;
-  for(const part of parts){const p=findPlace(part);if(p&&p.drive!=null&&(best==null||p.drive>best))best=p.drive}
-  return best==null?null:best+(parts.length-1)*st.workPer};
+// 나눠 넣으면 먼저 들르는 곳마다 나눠 넣는 작업 시간(한 곳당 30분)을 더함. 같은 회사 두 동은 한 곳으로 봄
+const placeDrive=t=>{let best=null;
+  for(const part of String(t||"").split("+")){const p=findPlace(part);if(p&&p.drive!=null&&(best==null||p.drive>best))best=p.drive}
+  return best==null?null:best+(stopsOf(t)-1)*st.splitWork};
 
 /* ---------- 붙여넣기 읽기 ---------- */
 function findCo(line){
@@ -625,7 +630,7 @@ function buildStatic(){
 function fillTop(){
   ["date","am","day","pm","note","cutoff"].forEach(k=>$(k).value=st[k]||"");
   $("lastMode").value=st.lastMode;$("jeo").checked=st.jeo;$("showReasons").checked=st.showReasons;$("rule").value=st.rule;
-  $("load").value=st.load;$("rest").value=st.rest;$("restMode").value=st.restMode;$("slack").value=st.slack;$("workPer").value=st.workPer;
+  $("load").value=st.load;$("rest").value=st.rest;$("restMode").value=st.restMode;$("slack").value=st.slack;$("workPer").value=st.workPer;$("splitWork").value=st.splitWork;
   $("sampleBanner").hidden=!st.sample;
 }
 
@@ -727,7 +732,7 @@ document.addEventListener("input",e=>{
   if(id==="jeo"||id==="showReasons"){st[id]=t.checked;renderLive();return}
   if(id==="rule"){st.rule=t.value;renderLive();return}
   if(id==="pasteCo"){st.pasteCo=+t.value;save();return}
-  if(id==="workPer"){st.workPer=Math.max(0,+t.value||0);buildPlaces();renderLive();return}
+  if(id==="workPer"||id==="splitWork"){st[id]=Math.max(0,+t.value||0);buildPlaces();renderLive();return}
   if(id==="load"||id==="rest"||id==="slack"){st[id]=Math.max(0,+t.value||0);renderLive();return}
   if(id==="restMode"){st.restMode=t.value;renderLive();return}
   if(m=id.match(/^coName(\d)$/)){st.cos[+m[1]]=t.value.trim()||`회사${+m[1]+1}`;
