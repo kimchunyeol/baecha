@@ -167,7 +167,7 @@ summary{cursor:pointer;font-weight:500;font-size:14px}
         <label class="field" style="flex:1 1 180px"><span>회사 이름이 없는 글은 이 회사로</span><select id="pasteCo"></select></label>
         <button type="button" class="primary" id="addPaste">요청 목록에 넣기</button>
       </div>
-      <p class="hint">4개 회사 글을 한꺼번에 붙여넣어도 돼요. "한정", "한화", "혜성", "비봉" 같은 줄을 보고 회사를 나눠요. "나주후 충주"는 나주로 가는 차로 읽고, 충주를 TDI에서 또 실으면 따로 적힌 줄로 두 번째 탕을 잡아요. "2회전"도 둘째 탕 줄이 따로 있으면 TDI 두 번, 없으면 다른 곳 2회전으로 읽어요. "13~14시"는 14시까지, "익착"은 시간 제한 없음으로 읽어요. 하차지 이름으로 걸리는 시간을 채우고, "13시", "10시착"은 도착 지정 시간으로 읽어요.</p>
+      <p class="hint">4개 회사 글을 한꺼번에 붙여넣어도 돼요. "한정", "한화", "혜성", "비봉" 같은 줄을 보고 회사를 나눠요. "나주후 충주"는 나주로 가는 차로 읽고, 충주를 TDI에서 또 실으면 따로 적힌 줄로 두 번째 탕을 잡아요. "2회전"도 둘째 탕 줄이 따로 있으면 TDI 두 번, 없으면 다른 곳 2회전으로 읽어요. "13~14시"는 14시까지, "익착"은 시간 제한 없음으로 읽어요. "A+B"로 나눠 넣는 차는 먼저 도착하는 A 기준으로 짜요. 하차지 이름으로 걸리는 시간을 채우고, "13시", "10시착"은 도착 지정 시간으로 읽어요.</p>
     </section>
 
     <section class="panel sec" aria-label="요청 목록">
@@ -204,7 +204,7 @@ summary{cursor:pointer;font-weight:500;font-size:14px}
       <details>
         <summary>지역별 걸리는 시간</summary>
         <div class="sec" style="margin-top:10px">
-          <p class="hint">TDI에서 하차지까지 걸리는 시간이에요. 처음 값은 거리로 대충 잡은 거라 실제 시간으로 고쳐 주세요. "다른 이름"에 거래처 이름을 쉼표로 넣으면(예: 수정, 천보) 그 이름으로도 찾아요. 하차 마감을 넣으면 마감 안에 작업이 끝나도록 도착 시간을 잡아요(늦으면 안 되는 시간이라 여유를 안 줘요). 작업 시간은 비워 두면 한 곳에 다 내릴 때 1시간, "A+B"처럼 나눠 넣을 때는 한 곳당 30분으로 계산해요.</p>
+          <p class="hint">TDI에서 하차지까지 걸리는 시간이에요. 처음 값은 거리로 대충 잡은 거라 실제 시간으로 고쳐 주세요. "다른 이름"에 거래처 이름을 쉼표로 넣으면(예: 수정, 천보) 그 이름으로도 찾아요. 하차 마감을 넣으면 마감 안에 작업이 끝나도록 도착 시간을 잡아요(늦으면 안 되는 시간이라 여유를 안 줘요). 작업 시간은 비워 두면 1시간이에요. "A+B"처럼 나눠 넣는 차는 먼저 도착하는 A를 기준으로 계산해요.</p>
           <div class="ptab" id="ptab"></div>
           <div class="btns"><button type="button" class="small" id="addPlace">지역 추가</button></div>
         </div>
@@ -222,7 +222,6 @@ summary{cursor:pointer;font-weight:500;font-size:14px}
             <label class="field"><span>휴게 (분)</span><input id="rest" type="number" min="0" step="5"></label>
             <label class="field"><span>도착 여유 (분)</span><input id="slack" type="number" min="0" step="10"></label>
             <label class="field"><span>하차 작업, 한 곳 (분)</span><input id="workPer" type="number" min="0" step="10"></label>
-            <label class="field"><span>나눠 넣을 때 한 곳당 (분)</span><input id="splitWork" type="number" min="0" step="10"></label>
             <label class="field"><span>휴게 넣는 방식</span>
               <select id="restMode"><option value="once">한 번만</option><option value="per2h">2시간 운전마다</option></select></label>
           </div>
@@ -376,17 +375,16 @@ function findPlace(text){
 // 여러 곳에 나눠 넣는지: "+"로 나뉜 곳 중 서로 다른 지역 수
 const stopsOf=t=>{const seen=new Set();String(t||"").split("+").forEach(x=>{const p=findPlace(x);seen.add(p?p.name:norm(x))});seen.delete("");return Math.max(1,seen.size)};
 function placeClose(text){
-  const n=norm(text);if(!n)return null;let due=null;const split=stopsOf(text)>1;
+  text=String(text||"").split("+")[0];   // 나눠 넣어도 먼저 도착하는 곳 기준
+  const n=norm(text);if(!n)return null;let due=null;const split=false;
   for(const p of st.places){if(!p.close)continue;
     if([p.name,...(p.alias||"").split(",")].some(nm=>{const k=norm(nm);return k&&n.includes(k)})){
       const d=toMin(p.close)-(p.work??(split?st.splitWork:st.workPer));if(due==null||d<due)due=d}}
   return due;
 }
 // 여러 곳에 내리면("파주에너지+수처리") 그중 가장 먼 곳 기준
-// 나눠 넣으면 먼저 들르는 곳마다 나눠 넣는 작업 시간(한 곳당 30분)을 더함. 같은 회사 두 동은 한 곳으로 봄
-const placeDrive=t=>{let best=null;
-  for(const part of String(t||"").split("+")){const p=findPlace(part);if(p&&p.drive!=null&&(best==null||p.drive>best))best=p.drive}
-  return best==null?null:best+(stopsOf(t)-1)*st.splitWork};
+// 나눠 넣어도 먼저 도착하는 곳 기준 (모르는 곳이면 다음 곳)
+const placeDrive=t=>{for(const part of String(t||"").split("+")){const p=findPlace(part);if(p&&p.drive!=null)return p.drive}return null};
 
 /* ---------- 붙여넣기 읽기 ---------- */
 function findCo(line){
@@ -646,7 +644,7 @@ function buildStatic(){
 function fillTop(){
   ["date","am","day","pm","note","cutoff"].forEach(k=>$(k).value=st[k]||"");
   $("lastMode").value=st.lastMode;$("jeo").checked=st.jeo;$("showReasons").checked=st.showReasons;$("rule").value=st.rule;
-  $("load").value=st.load;$("rest").value=st.rest;$("restMode").value=st.restMode;$("slack").value=st.slack;$("workPer").value=st.workPer;$("splitWork").value=st.splitWork;
+  $("load").value=st.load;$("rest").value=st.rest;$("restMode").value=st.restMode;$("slack").value=st.slack;$("workPer").value=st.workPer;
   $("sampleBanner").hidden=!st.sample;
 }
 
