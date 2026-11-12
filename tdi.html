@@ -285,13 +285,13 @@ function dayStr(add){const t=new Date();t.setDate(t.getDate()+add);return `${t.g
 const $=id=>document.getElementById(id);
 
 const DEF_COS=["한정특수","한익스","혜성","비봉"];
-const DEF_ALIAS=["한정","한화","",""];
+const DEF_ALIAS=["한정","한화","해성",""];
 // 처음 값은 거리로 잡은 대략의 시간 (TDI → 하차지)
 const DEF_PLACES=[
   ["금성",300,""],["한수",240,""],["익산",120,"창대"],["대죽",270,"KCC"],["당진",240,"광진"],["삼주당진",240,"","20:00",null],
   ["포항",240,"대경"],["영천",210,""],["진천",240,"수정"],["충주",270,"천보"],["인천",300,"이영"],
   ["시흥",270,""],["화성",240,""],["부산",180,""],["나주",90,""],["울산",180,""],["군산",180,""],["코솔텍",240,""],
-  ["파주",330,""],["대구",180,""],["GS칼텍스",30,"GS"],["코리아써키트",270,"코리아, 이미지, 수처리, 안산","17:30",120],["에코파크",150,"정읍"]
+  ["파주",330,""],["대구",180,""],["GS칼텍스",30,"GS"],["코리아써키트",270,"코리아, 이미지, 수처리","17:30",120],["안산",270,""],["시내",30,"여수"],["청주",225,""],["에코파크",150,"정읍"]
 ].map(([name,drive,alias,close="",work=null])=>({name,drive,alias,close,work}));
 const DEF_NOTES=[
   "☆점심시간 없이 연속 상차☆",
@@ -337,6 +337,7 @@ const fresh=!st||!Array.isArray(st.reqs);
 if(fresh)st={am:"",day:"",pm:"",note:"",cutoff:"",lastMode:"auto",jeo:true,showReasons:true,rule:"first",load:50,rest:20,restMode:"once",cos:DEF_COS.slice(),reqs:[],seq:1,pasteCo:0};
 st.cos=(st.cos||DEF_COS).map((c,k)=>/^예시[BCD]$/.test(c)?DEF_COS[k]:c);
 if(!Array.isArray(st.coAlias))st.coAlias=DEF_ALIAS.slice();
+if(!/해성/.test(st.coAlias[2]||""))st.coAlias[2]=(st.coAlias[2]?st.coAlias[2]+", ":"")+"해성";
 if(!Array.isArray(st.places))st.places=structuredClone(DEF_PLACES);
 // 새로 알게 된 지역은 빠져 있으면 추가, 울산은 3:30 → 3:00 (11/12 실제 순번 기준)
 DEF_PLACES.forEach(d=>{if(!st.places.some(p=>norm(p.name)===norm(d.name)))st.places.push({...d})});
@@ -347,7 +348,8 @@ st.places.forEach(p=>{if(p.close===undefined)p.close="";if(p.work===undefined)p.
 // 삼주 당진공장은 따로 (20시 마감)
 {const dj=st.places.find(p=>p.name==="당진");if(dj&&/삼주/.test(dj.alias||""))dj.alias=dj.alias.replace(/삼주\s*,?\s*/,"").trim()}
 // 코리아2공장 = 안산 코리아써키트 (이미지도 같은 곳), 4:30
-{const k=st.places.find(p=>p.name==="코리아2공장");if(k){Object.assign(k,{name:"코리아써키트",alias:"코리아, 이미지, 수처리, 안산"});if(k.drive==null)k.drive=270}
+{const kc0=st.places.find(p=>p.name==="코리아써키트");if(kc0)kc0.alias=(kc0.alias||"").replace(/,?\s*안산/,"").trim();}
+{const k=st.places.find(p=>p.name==="코리아2공장");if(k){Object.assign(k,{name:"코리아써키트",alias:"코리아, 이미지, 수처리"});if(k.drive==null)k.drive=270}
  const dup=st.places.filter(p=>p.name==="코리아써키트");if(dup.length>1)st.places.splice(st.places.lastIndexOf(dup[1]),1);
  const kc=st.places.find(p=>p.name==="코리아써키트");if(kc&&!/수처리/.test(kc.alias||""))kc.alias=(kc.alias?kc.alias+", ":"")+"수처리"}
 delete st.dests;
@@ -400,7 +402,7 @@ function readDate(line){
 }
 function parseLine(raw){
   let L=raw.replace(/[*☆★]/g," ").trim();
-  const cars=[];L.replace(/(^|[^\d:.])(\d{4})(?!\d)/g,(a,b,c)=>{cars.push(c);return a});
+  const cars=[];L.replace(/(^|[^\d:])(\d{4})(?!\d)/g,(a,b,c)=>{cars.push(c);return a});
   if(!cars.length)return null;
   cars.forEach(c=>{L=L.replace(c," ")});   // 차번을 먼저 빼야 "6426 시흥"이 26시로 안 읽힘
   let w=null,drive=null,arr="",t;
@@ -408,11 +410,13 @@ function parseLine(raw){
   if(t=L.match(/(\d{1,2})\s*~\s*(\d{1,2})\s*시/)){if(+t[2]<=24)arr=`${p2(+t[2])}:00`;L=L.replace(t[0]," ")}   // "13~14시" → 14시까지
   if(t=L.match(/(\d+(?:\.\d+)?)\s*시간(?:\s*(\d+)\s*분)?/)){drive=Math.round(+t[1]*60)+(+t[2]||0);L=L.replace(t[0]," ")}
   if(t=L.match(/(\d{1,2})\s*조/)){if(+t[1]>=1&&+t[1]<=N)w=+t[1];L=L.replace(t[0]," ")}
+  // "정읍 13시+삼주당진": 시간은 그 시간이 붙은 곳 기준
+  let arrPart=-1;{const parts=L.split("+");if(parts.length>1)arrPart=parts.findIndex(x=>/\d{1,2}\s*(?:~\s*\d{1,2}\s*)?시(?!간)/.test(x))}
   if(!arr&&(t=L.match(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/))){if(+t[1]<=24)arr=`${p2(+t[1])}:${p2(+t[2]||0)}`;L=L.replace(t[0]," ")}
   const jeo=/저순도/.test(L);
   const loadOnly=/상차만/.test(L);
   const twoElse=/2\s*회전/.test(L);
-  L=L.replace(/저순도|상차만|2\s*회전|두\s*군데|\d?\s*착/g," ").replace(/당(?=\s*\/|\s*$)/g,"").replace(/[:：,.()]/g," ")
+  L=L.replace(/저순도|상차만|2\s*회전|두\s*군데|\d?\s*착/g," ").replace(/([가-힣])\d+(?=\s|후|$)/g,"$1").replace(/당(?=\s*\/|\s*$)/g,"").replace(/[:：,.()]/g," ")
      .replace(/^\s*\/|\/\s*$/g,"").replace(/\s*\/\s*/g,"/").replace(/\s+/g," ").trim();
   // "나주후 충주" → 이번에 실은 건 나주로. 충주는 다음 일 (TDI에서 또 실으면 따로 한 줄이 있음)
   let place=L,dr=drive;
@@ -421,7 +425,9 @@ function parseLine(raw){
   else if(dr==null)dr=placeDrive(L.split("/")[0]);
   if(loadOnly)place="상차만";
   if(nextDay){place=place?place+" (익착)":"익착";arr=""}
-  const out=cars.map(no=>({no,want:w,place,drive:dr,arr,early:twoElse,pin:jeo&&w===2}));   // "2조 1537저순도" → 2조 고정
+  let arrDrive=null;
+  if(arrPart>=0&&arr){const part=place.split("+")[arrPart]||"";const p=findPlace(part);if(p&&p.drive!=null)arrDrive=p.drive+arrPart*st.splitWork}
+  const out=cars.map(no=>({no,want:w,place,drive:dr,arr,arrDrive,early:twoElse,pin:jeo&&w===2}));   // "2조 1537저순도" → 2조 고정
   return {items:out,jeo};
 }
 function parsePaste(text,defCo){
@@ -452,16 +458,17 @@ function assign(){
   const info=R.map(r=>{const d=r.drive??placeDrive((r.place||"").replace(/\s*\(.*$/,"").split("/")[0]);let due=r.arr?toMin(r.arr):null,next=false,hard=false;
     const pc=/익착/.test(r.place||"")?null:placeClose(r.place);
     if(pc!=null&&(due==null||pc<=due)){due=pc;hard=true}   // 하차 마감 - 작업 시간: 늦으면 안 됨
-    if(due!=null&&d!=null&&arrive(0,d)>due){due=null;next=true}   // 1조로도 제시간에 못 닿으면 다음 날 착
-    return {d,w:r.want?r.want-1:null,due,next,hard}});
+    const dd=(!hard&&r.arrDrive!=null)?r.arrDrive:d;   // 시간이 붙은 곳까지 걸리는 시간
+    if(due!=null&&dd!=null&&arrive(0,dd)>due+60){due=null;next=true}   // 1조로도 1시간 넘게 늦으면 다음 날 착
+    return {d,dd,w:r.want?r.want-1:null,due,next,hard}});
   const prev=R.map((r,i)=>{for(let j=i-1;j>=0;j--)if(R[j].no&&R[j].no===r.no)return j;return -1});
   // 같은 날 다음 탕이 있는 차(다른 곳 2회전, 또는 TDI 두 번째 탕이 익착이 아닌 차)는 신청 조를 지켜 준다
   const sameDayNext=i=>R.some((r,j)=>prev[j]===i&&!/익착/.test(r.place||""));
   const strong=i=>R[i].early||sameDayNext(i);
-  const grp=R.map((r,i)=>r.pin&&info[i].w!=null?0:strong(i)&&info[i].w!=null?1:(info[i].due!=null&&info[i].d!=null)?2:info[i].w!=null?3:4);
+  const grp=R.map((r,i)=>r.pin&&info[i].w!=null?0:strong(i)&&info[i].w!=null?1:(info[i].due!=null&&info[i].dd!=null)?2:info[i].w!=null?3:4);
   const free=s=>occ[s].length<cap(s);
-  const fits=(i,s)=>{const f=info[i];return f.due==null||f.d==null||arrive(s,f.d)<=f.due+(f.hard?0:st.slack)};
-  const ontime=(i,s)=>{const f=info[i];return f.due==null||f.d==null||arrive(s,f.d)<=f.due};
+  const fits=(i,s)=>{const f=info[i];return f.due==null||f.dd==null||arrive(s,f.dd)<=f.due+(f.hard?0:st.slack)};
+  const ontime=(i,s)=>{const f=info[i];return f.due==null||f.dd==null||arrive(s,f.dd)<=f.due};
   const es=i=>{const j=prev[i];if(j<0)return -Infinity;const p=res[j].slot;if(p==null)return null;
     const d=info[j].d;return d==null?START[p]+1:START[p]+st.load+2*d+2*restOf(d)};
   const done=new Set();
@@ -502,7 +509,11 @@ function assign(){
     const f=info[i],e=es(i);
     if(e===null)return false;
     if(grp[i]===0){put(i,f.w);res[i].status="pin";if(occ[f.w].length>cap(f.w))res[i].reason="칸이 넘침";return true}
-    const cand=[];for(let s=0;s<N;s++)if(START[s]>=e&&free(s)&&fits(i,s))cand.push(s);
+    let cand=[];for(let s=0;s<N;s++)if(START[s]>=e&&free(s)&&fits(i,s))cand.push(s);
+    // 도착 시간을 어떻게 해도 못 맞추면 빼지 말고 가장 가까운 자리에 넣고 알려 줌
+    if(!cand.length&&f.due!=null){for(let s=0;s<N;s++)if(START[s]>=e&&free(s))cand.push(s);
+      if(cand.length){const s0=f.w!=null?cand.sort((a,b)=>Math.abs(a-f.w)-Math.abs(b-f.w)||a-b)[0]:cand[0];
+        put(i,s0);res[i].status=f.w!=null&&s0!==f.w?"moved":"auto";res[i].reason=`도착 ${fmt(f.due)}은 못 맞춤, 남은 자리 중 가까운 조`;return true}}
     if(f.w!=null){
       if(cand.includes(f.w)){put(i,f.w);res[i].status="ok";return true}
       res[i].reason=whyNot(i,f.w,e);
@@ -512,7 +523,7 @@ function assign(){
     }
     if(!cand.length){res[i].status="none";res[i].reason=f.due!=null&&f.d!=null?`도착 ${fmt(f.due)}에 맞는 빈 조가 없어요`:"빈 조가 없어요";done.add(i);return true}
     const sp=cand.filter(s=>occ[s].length+demand(s)<cap(s));
-    if(f.due!=null&&f.d!=null){
+    if(f.due!=null&&f.dd!=null){
       // 제시간 + 빈자리 → 가장 늦은 조, 없으면 여유 안에서 덜 늦는 조
       // 신청한 차 자리를 가져올 수 있는 건 그 차가 더 가까운 곳(또는 익착·다음 날 착)으로 갈 때만
       const bumpable=k=>info[k].next||info[k].d==null||/익착/.test(R[k].place||"")||info[k].d<f.d;
@@ -645,7 +656,7 @@ function renderLive(){
     else if(x.status==="moved")h=`<b class="mv">${r.want}조 → ${x.slot+1}조</b> <small>${esc(x.reason)}</small>`;
     else if(x.status==="auto")h=`<b>${x.slot+1}조</b> <small>${esc(x.reason)}</small>`;
     else h=`<b class="late">자리 없음</b> <small>${esc(x.reason)}</small>`;
-    if(x.slot!=null&&f.d!=null){const a=arrive(x.slot,f.d);h+=` · ${fmt(a)} 도착 예상`;
+    if(x.slot!=null&&f.d!=null){const a0=arrive(x.slot,f.d),a=arrive(x.slot,f.dd??f.d);h+=` · ${fmt(a0)} 도착 예상`+(f.dd!==f.d&&f.due!=null?` (시간 붙은 곳 ${fmt(a)})`:"");
       if(f.due!=null&&f.hard)h+=a<=f.due?` <span class="okc">✓ 마감 맞춤 (${fmt(f.due)}까지 도착)</span>`:` <span class="late">마감에 늦음 (${fmt(f.due)}까지 도착해야 함)</span>`;
       else if(f.due!=null)h+=a<=f.due?` <span class="okc">✓ 지정 ${fmt(f.due)}</span>`:a<=f.due+st.slack?` <span class="mv">지정 ${fmt(f.due)}보다 ${a-f.due}분 늦음 (여유 안)</span>`:` <span class="late">지정 ${fmt(f.due)}보다 ${a-f.due}분 늦음</span>`}
     if(f.next)h+=` · <span class="mv">${r.arr} 도착은 당일 불가 → 다음 날 착으로 봄</span>`;
@@ -660,7 +671,7 @@ function renderLive(){
       const mk=x.status==="moved"?`<span class="mk">↪${r.want}조</span>`:x.status==="pin"?`<span class="mk">고정</span>`:"";
       let sm=esc(r.place||"");
       if(f.d!=null)sm+=` → ${fmt(arrive(s,f.d))}`;
-      if(f.due!=null&&f.d!=null){const a=arrive(s,f.d);sm+=a<=f.due?` (지정 ${fmt(f.due)})`:` <span class="${a<=f.due+st.slack?"mv":"late"}">(지정 ${fmt(f.due)})</span>`}
+      if(f.due!=null&&f.dd!=null){const a=arrive(s,f.dd);sm+=a<=f.due?` (지정 ${fmt(f.due)})`:` <span class="${a<=f.due+st.slack?"mv":"late"}">(지정 ${fmt(f.due)})</span>`}
       return `<span class="car"><span class="chip c${r.co}" title="${esc(coName(r.co))}">${esc(r.no)}${mk}</span>${sm.trim()?`<small>${sm}</small>`:""}</span>`});
     if(s===1&&st.jeo)cars.push(`<span class="car"><span class="chip jeo">저순도</span></span>`);
     const over=A.occ[s].length>A.cap(s);
@@ -699,7 +710,7 @@ function addFromText(text,defCo){
   let added=0,skip=0;const count={};
   for(const it of items){
     if(st.reqs.some(r=>r.no===it.no&&r.co===it.co&&r.want===it.want&&r.place===it.place&&(r.arr||"")===it.arr)){skip++;continue}
-    st.reqs.push({id:st.seq++,no:it.no,co:it.co,want:it.want,place:it.place||(it.pin?"저순도":""),drive:it.drive,arr:it.arr,pin:!!it.pin,early:!!it.early,late:false});added++;
+    st.reqs.push({id:st.seq++,no:it.no,co:it.co,want:it.want,place:it.place||(it.pin?"저순도":""),drive:it.drive,arr:it.arr,arrDrive:it.arrDrive??null,pin:!!it.pin,early:!!it.early,late:false});added++;
     count[it.co]=(count[it.co]||0)+1;
   }
   if(date){const y=(st.date||dayStr(1)).slice(0,4);st.date=`${y}-${p2(date[0])}-${p2(date[1])}`}
