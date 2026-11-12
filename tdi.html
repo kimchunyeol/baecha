@@ -459,12 +459,15 @@ function assign(){
     const pc=/익착/.test(r.place||"")?null:placeClose(r.place);
     if(pc!=null&&(due==null||pc<=due)){due=pc;hard=true}   // 하차 마감 - 작업 시간: 늦으면 안 됨
     const dd=(!hard&&r.arrDrive!=null)?r.arrDrive:d;   // 시간이 붙은 곳까지 걸리는 시간
-    if(due!=null&&dd!=null&&arrive(0,dd)>due+60){due=null;next=true}   // 1조로도 1시간 넘게 늦으면 다음 날 착
+    if(due!=null&&dd!=null&&arrive(0,dd)>due){due=null;next=true}   // 1조로도 제시간에 못 닿으면 다음 날 착 (11/13 실제: 부산 10시착 → 13조)
     return {d,dd,w:r.want?r.want-1:null,due,next,hard}});
   const prev=R.map((r,i)=>{for(let j=i-1;j>=0;j--)if(R[j].no&&R[j].no===r.no)return j;return -1});
   // 같은 날 다음 탕이 있는 차(다른 곳 2회전, 또는 TDI 두 번째 탕이 익착이 아닌 차)는 신청 조를 지켜 준다
   const sameDayNext=i=>R.some((r,j)=>prev[j]===i&&!/익착/.test(r.place||""));
-  const strong=i=>R[i].early||sameDayNext(i);
+  // 시내처럼 1시간 안쪽 가까운 곳 차는 다음 탕을 쉽게 옮길 수 있으니 보호 안 함
+  const strong=i=>(R[i].early||sameDayNext(i))&&!(info[i].d!=null&&info[i].d<60);
+  // 익착·다음 날 착 차는 신청 조가 있어도 뒤로 양보 (11/13 실제: 1987 10조→17조)
+  const yieldy=i=>info[i].next||/익착/.test(R[i].place||"");
   const grp=R.map((r,i)=>r.pin&&info[i].w!=null?0:strong(i)&&info[i].w!=null?1:(info[i].due!=null&&info[i].dd!=null)?2:info[i].w!=null?3:4);
   const free=s=>occ[s].length<cap(s);
   const fits=(i,s)=>{const f=info[i];return f.due==null||f.dd==null||arrive(s,f.dd)<=f.due+(f.hard?0:st.slack)};
@@ -479,11 +482,11 @@ function assign(){
   const feas=i=>{let c=0;for(let s=0;s<N;s++)if(fits(i,s))c++;return c};
   G[2].sort((a,b)=>cmp([R[a].late?1:0,feas(a),info[a].due,a],[R[b].late?1:0,feas(b),info[b].due,b]));
   const ea=i=>R[i].early?0:1;   // 다른 곳 2회전 차 먼저
-  const k2=i=>{const late=R[i].late?1:0;return st.rule==="far"?[late,ea(i),-(info[i].d||0),i]:[late,ea(i),i]};
+  const k2=i=>{const late=R[i].late||yieldy(i)?1:0;return st.rule==="far"?[late,ea(i),-(info[i].d||0),i]:[late,ea(i),i]};
   G[1].sort((a,b)=>cmp(k2(a),k2(b)));
   G[3].sort((a,b)=>cmp(k2(a),k2(b)));
   const hasNext=i=>prev.some(j=>j===i)?0:1;
-  G[4].sort((a,b)=>cmp([R[a].late?1:0,ea(a),hasNext(a),-(info[a].d||0),a],[R[b].late?1:0,ea(b),hasNext(b),-(info[b].d||0),b]));
+  G[4].sort((a,b)=>cmp([R[a].late||yieldy(a)?1:0,ea(a),hasNext(a),-(info[a].d||0),a],[R[b].late?1:0,ea(b),hasNext(b),-(info[b].d||0),b]));
   const put=(i,s)=>{occ[s].push(i);res[i].slot=s;done.add(i)};
   const firstFrom=e=>{for(let s=0;s<N;s++)if(START[s]>=e)return s+1;return N};
 
@@ -495,6 +498,7 @@ function assign(){
     const tw=js.find(j=>grp[j]===1);if(tw!=null&&grp[i]!==1)return `같은 날 2회전 차(${R[tw].no}) 우선`;
     const hd=js.find(j=>grp[j]===2);if(hd!=null)return `도착 시간 정해진 차(${R[hd].no}) 우선`;
     if(R[i].late)return "늦게 올린 요청이라 남은 칸으로";
+    if(yieldy(i))return "익착·다음 날 착이라 양보";
     const o=js.find(j=>grp[j]===3||grp[j]===1);
     if(o!=null&&R[o].early&&!R[i].early)return `다른 곳 2회전 차(${R[o].no}) 우선`;
     if(o!=null){
