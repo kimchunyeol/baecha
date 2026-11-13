@@ -1076,7 +1076,7 @@ function renderStat(){
   $('#statTbl').innerHTML=`<thead><tr><th>차번</th><th>기사</th><th>당착</th><th>상차만</th><th>상차 횟수</th><th>운행일</th><th>광진</th><th>외부</th><th>쉼</th></tr></thead><tbody>`+
     rows.map(r=>`<tr><td>${esc(r.car)}</td><td>${esc(r.name)}</td>${td(r.same)}${td(r.load)}<td class="sum">${r.total}</td>${td(r.days)}${td(r.kj)}${td(r.etc)}${td(r.rest)}</tr>`).join('')+
     `<tr class="tot"><td>합계</td><td>${rows.length}대</td><td>${sum('same')}</td><td>${sum('load')}</td><td>${sum('total')}</td><td>${sum('days')}</td><td>${sum('kj')}</td><td>${sum('etc')}</td><td>${sum('rest')}</td></tr></tbody>`;
-  $('#xlsBtn').disabled=!workDays;
+  $('#xlsBtn').disabled=!(workDays||later);
 }
 $('#statMonth').addEventListener('input',renderStat);
 
