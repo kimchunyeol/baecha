@@ -1248,9 +1248,13 @@ function _applyDay(d,data,j){
 }
 function applySettings(s){
   if(!s)return false;
+  // 예전 버전 기기가 연락처 없이 저장했으면, 이 기기의 연락처를 지키고 다시 올림
+  let restore=false; if(!('phones' in s)&&Object.keys(db.phones||{}).length){s={...s,phones:db.phones};restore=true}
   const j=JSON.stringify({fleet:s.fleet||[],drivers:s.drivers||{},phones:s.phones||{},hol:s.hol||{},fleetSeeded:s.fleetSeeded||0});
-  Sync.lastSet=j; if(j===setJSON())return false;
-  db.fleet=s.fleet||[];db.drivers=s.drivers||{};db.phones=s.phones||{};db.hol=s.hol||{};db.fleetSeeded=s.fleetSeeded||db.fleetSeeded;return true;
+  Sync.lastSet=restore?'':j; if(j===setJSON()){if(restore)setTimeout(()=>Sync.on&&pushChanges(),500);return false}
+  db.fleet=s.fleet||[];db.drivers=s.drivers||{};db.phones=s.phones||{};db.hol=s.hol||{};db.fleetSeeded=s.fleetSeeded||db.fleetSeeded;
+  if(restore){Sync.lastSet='';setTimeout(()=>Sync.on&&pushChanges(),500)}
+  return true;
 }
 async function startSync(user){
   const fs=Sync.fs=firebase.firestore(); Sync.ref=fs.collection('boards').doc(BOARD);
