@@ -192,6 +192,8 @@ table.stat td.sum{font-weight:700}
 .restban .rcar s{text-decoration-color:var(--c3);text-decoration-thickness:2px}
 .restban .rcar small{font-family:var(--f-body);font-weight:400;margin-left:5px;color:var(--ink)}
 .restban .rnote{color:var(--muted);font-size:13px}
+table.tel td:last-child,table.tel th:last-child{text-align:left;font-family:var(--f-mono);user-select:all}
+table.tel td.none{color:var(--muted);font-family:var(--f-body);user-select:none}
 .holname{color:var(--c3);font-weight:700;font-size:14px}
 .cal-day .n{font-family:var(--f-body);font-size:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:0 6px;white-space:nowrap}
 @media (max-width:760px){.tabs{display:flex}.board{grid-template-columns:1fr}.col:not(.on){display:none}}
@@ -293,6 +295,7 @@ body{margin:0}
     <span id="hint">‘상차만’ 차는 날짜를 골라 넘기면 그 날 익착 칸에 들어갑니다.</span>
     <span class="right">
       <button id="openLoad">지난 배차 불러오기</button>
+      <button id="telBtn">연락처</button>
       <button id="fleetBtn">차량 목록</button>
       <button id="clearDay">이 날 배차 전부 지우기</button>
       <button id="carry">상차만 → 날짜 골라 넘기기</button>
@@ -358,6 +361,17 @@ body{margin:0}
   </div>
 </div>
 
+<!-- 연락처 -->
+<div class="sheet" id="sTel" hidden>
+  <div class="box">
+    <h3>기사 연락처</h3>
+    <p id="telInfo"></p>
+    <input id="telQ" class="full" autocomplete="off" placeholder="차번이나 이름으로 찾기">
+    <div class="full tblwrap"><table class="stat tel" id="telTbl"></table></div>
+    <div class="btns"><button type="button" data-close>닫기</button></div>
+  </div>
+</div>
+
 <!-- 상차만 넘기기 -->
 <div class="sheet" id="sCarry" hidden>
   <form class="box" id="fCarry">
@@ -373,7 +387,7 @@ body{margin:0}
 <div class="sheet" id="sFleet" hidden>
   <form class="box" id="fFleet">
     <h3>차량 목록</h3>
-    <p>한 줄에 한 대씩 <b>차번 기사이름</b>으로 넣으세요. 이름은 없어도 돼요. 이름은 이 컴퓨터에만 저장되고 카톡 글에는 나가지 않아요.</p>
+    <p>한 줄에 한 대씩 <b>차번 기사이름 연락처</b>로 넣으세요. 이름과 연락처는 없어도 돼요. 카톡 글에는 나가지 않고, 로그인한 사람만 볼 수 있어요.</p>
     <textarea id="fleetTxt" class="mono full" rows="12" placeholder="2503 홍길동&#10;2636 김철수&#10;3611"></textarea>
     <div class="btns"><span class="left" id="fleetN"></span><button type="button" data-close>취소</button><button type="submit" class="primary">저장</button></div>
   </form>
@@ -920,7 +934,7 @@ render=function(){_render4();renderIdle()};
 $('#fFleet').addEventListener('submit',()=>setTimeout(renderIdle,0));
 
 // ===== 기사 이름 / 쉬는 차 / 불러오기 / 기록 찾기 / 한 달 통계 / 엑셀 =====
-db.drivers=db.drivers||{}; db.rest=db.rest||{};
+db.drivers=db.drivers||{}; db.rest=db.rest||{}; db.phones=db.phones||{};
 function restOf(d){return db.rest[d]||[]}
 
 // 차량 목록: "차번 이름" 한 줄씩
@@ -929,16 +943,18 @@ function parseFleet(t){
   t.split(/\n/).forEach(line=>{
     curC=null;
     line.trim().split(/[\s,]+/).filter(Boolean).forEach(tk=>{
-      if(/^\d{4}$/.test(tk)){curC={car:tk,name:''};out.push(curC)}
+      if(/^\d{4}$/.test(tk)){curC={car:tk,name:'',tel:''};out.push(curC)}
+      else if(curC&&/^0\d{1,2}-?\d{3,4}-?\d{4}$/.test(tk)){const d=tk.replace(/\D/g,'');curC.tel=d.length===11?d.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3'):d.replace(/(\d{2,3})(\d{3,4})(\d{4})/,'$1-$2-$3')}
       else if(curC){curC.name=(curC.name+' '+tk).trim()}
     });
   });
-  const m=new Map(); out.forEach(o=>{if(!m.has(o.car)||o.name)m.set(o.car,o.name)});
+  const m=new Map(); out.forEach(o=>{const p=m.get(o.car);m.set(o.car,{name:o.name||(p&&p.name)||'',tel:o.tel||(p&&p.tel)||''})});
   return m;
 }
 fleetCount=function(){$('#fleetN').textContent=`${parseFleet($('#fleetTxt').value).size}대`};
+$('#fleetTxt').addEventListener('input',()=>fleetCount()); // 예전 대수 세기(이름까지 셈)를 덮어씀
 openFleet=function(){
-  $('#fleetTxt').value=[...new Set(db.fleet||[])].sort().map(c=>`${c} ${db.drivers[c]||''}`.trim()).join('\n');
+  $('#fleetTxt').value=[...new Set(db.fleet||[])].sort().map(c=>`${c} ${db.drivers[c]||''} ${db.phones[c]||''}`.replace(/\s+/g,' ').trim()).join('\n');
   fleetCount(); show('#sFleet');
 };
 $('#fleetBtn').onclick=openFleet;
@@ -946,7 +962,7 @@ $('#fFleet').onsubmit=e=>{
   e.preventDefault();
   const m=parseFleet($('#fleetTxt').value);
   db.fleet=[...m.keys()];
-  m.forEach((n,c)=>{if(n)db.drivers[c]=n; else delete db.drivers[c]});
+  const dr={},ph={}; m.forEach((v,c)=>{if(v.name)dr[c]=v.name;if(v.tel)ph[c]=v.tel}); db.drivers=dr; db.phones=ph;
   save(); $('#sFleet').hidden=true;
   if(!$('#sEdit').hidden)renderPicker();
   render();
@@ -1108,7 +1124,7 @@ $('#xlsBtn').onclick=async()=>{
 $('#bkFile').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f)return;
   const r=new FileReader();
-  r.onload=()=>{try{const v=JSON.parse(r.result);db.drivers={...db.drivers,...(v.drivers||{})};db.rest={...(v.rest||{}),...db.rest};save();setTimeout(render,50)}catch(err){}};
+  r.onload=()=>{try{const v=JSON.parse(r.result);db.drivers={...db.drivers,...(v.drivers||{})};db.phones={...db.phones,...(v.phones||{})};db.rest={...(v.rest||{}),...db.rest};save();setTimeout(render,50)}catch(err){}};
   r.readAsText(f);
 },true);
 
@@ -1182,7 +1198,7 @@ const FB_CFG={apiKey:"AIzaSyAtSMKAHlQbfD7bibYCFsnJjva33RXVJCQ",authDomain:"baech
 const FB_VER='10.14.1', BOARD='main';
 const Sync={on:false,fs:null,ref:null,last:{},lastSet:'',timer:null,unsub:[],from:'0000',oldLoaded:false,oldLoading:null};
 const dayJSON=d=>JSON.stringify({items:db.items.filter(i=>i.day===d),rest:restOf(d)});
-const setJSON=()=>JSON.stringify({fleet:db.fleet||[],drivers:db.drivers||{},hol:db.hol||{},fleetSeeded:db.fleetSeeded||0});
+const setJSON=()=>JSON.stringify({fleet:db.fleet||[],drivers:db.drivers||{},phones:db.phones||{},hol:db.hol||{},fleetSeeded:db.fleetSeeded||0});
 function allDays(){return new Set([...db.items.map(i=>i.day),...Object.keys(db.rest||{})])}
 function showFresh(cache){if(!Sync.on)return;const d=new Date();syncState(cache?'busy':'on',cache?'다시 연결 중…':'연동됨')}
 function syncState(cls,txt){const s=$('#sync');s.hidden=false;s.className='sync '+cls;
@@ -1232,9 +1248,9 @@ function _applyDay(d,data,j){
 }
 function applySettings(s){
   if(!s)return false;
-  const j=JSON.stringify({fleet:s.fleet||[],drivers:s.drivers||{},hol:s.hol||{},fleetSeeded:s.fleetSeeded||0});
+  const j=JSON.stringify({fleet:s.fleet||[],drivers:s.drivers||{},phones:s.phones||{},hol:s.hol||{},fleetSeeded:s.fleetSeeded||0});
   Sync.lastSet=j; if(j===setJSON())return false;
-  db.fleet=s.fleet||[];db.drivers=s.drivers||{};db.hol=s.hol||{};db.fleetSeeded=s.fleetSeeded||db.fleetSeeded;return true;
+  db.fleet=s.fleet||[];db.drivers=s.drivers||{};db.phones=s.phones||{};db.hol=s.hol||{};db.fleetSeeded=s.fleetSeeded||db.fleetSeeded;return true;
 }
 async function startSync(user){
   const fs=Sync.fs=firebase.firestore(); Sync.ref=fs.collection('boards').doc(BOARD);
@@ -1247,7 +1263,7 @@ async function startSync(user){
       // 이 기기 첫 연결: 한 번만 전체를 읽어서 합침 (같은 날은 인터넷 쪽 우선, 이 기기에만 있는 날은 올림)
       const [sd,qs]=await Promise.all([Sync.ref.get(),days.get()]);
       qs.forEach(doc=>applyDay(doc.id,doc.data()));
-      if(sd.exists){const s=sd.data();s.fleet=[...new Set([...(s.fleet||[]),...(db.fleet||[]).filter(c=>!DEFAULT_FLEET.includes(c))])];s.drivers={...(db.drivers||{}),...(s.drivers||{})};applySettings(s)}
+      if(sd.exists){const s=sd.data();s.fleet=[...new Set([...(s.fleet||[]),...(db.fleet||[]).filter(c=>!DEFAULT_FLEET.includes(c))])];s.drivers={...(db.drivers||{}),...(s.drivers||{})};s.phones={...(db.phones||{}),...(s.phones||{})};applySettings(s)}
       Sync.lastSet=''; Sync.oldLoaded=true;
     }
     // 평소: 차량 목록과 최근 두 달 치만 계속 지켜봄
@@ -1367,6 +1383,19 @@ const _render7=render;
 render=function(){_render7();renderRestBan()};
 const _renderCal2=renderCal;
 renderCal=function(){_renderCal2();renderRestBan()};
+
+// 연락처 보기 (확인만)
+function renderTel(){
+  const q=$('#telQ').value.trim();
+  const f=[...new Set(db.fleet||[])].sort();
+  const rows=f.filter(c=>!q||c.includes(q)||(db.drivers[c]||'').includes(q));
+  const n=f.filter(c=>db.phones[c]).length;
+  $('#telInfo').textContent=n?`${f.length}대 중 ${n}대 연락처가 있어요. 고치려면 ‘차량 목록’에서 고치세요.`:'아직 연락처가 없어요. ‘차량 목록’에 차번 이름 연락처 순서로 넣으세요.';
+  $('#telTbl').innerHTML='<thead><tr><th>차번</th><th>기사</th><th>연락처</th></tr></thead><tbody>'+
+    rows.map(c=>`<tr><td>${esc(c)}</td><td>${esc(db.drivers[c]||'')}</td>${db.phones[c]?`<td>${esc(db.phones[c])}</td>`:'<td class="none">없음</td>'}</tr>`).join('')+'</tbody>';
+}
+$('#telBtn').onclick=()=>{$('#telQ').value='';renderTel();show('#sTel')};
+$('#telQ').addEventListener('input',renderTel);
 
 render();
 </script>
