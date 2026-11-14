@@ -287,9 +287,12 @@ const DEF_ALIAS=["한정","한화","해성",""];
 // 처음 값은 거리로 잡은 대략의 시간 (TDI → 하차지)
 const DEF_PLACES=[
   ["금성",300,""],["한수",240,""],["익산",120,"창대"],["대죽",270,"KCC, 대산"],["당진",240,"광진"],["삼주당진",240,"","20:00",null],
-  ["포항",240,"대경"],["영천",210,""],["진천",240,"수정"],["충주",270,"천보"],["인천",300,"이영, ES케미칼"],
-  ["시흥",270,""],["화성",310,"대성스틸"],["부산",180,""],["나주",90,""],["울산",180,""],["군산",180,""],["코솔텍",240,""],
-  ["파주",330,""],["대구",180,""],["GS칼텍스",30,"GS"],["코리아써키트",300,"코리아, 이미지, 수처리","17:30",90],["물류탱크",300,""],["안산",270,""],["시내",30,"여수"],["청주",225,""],["대우선재",270,"대우선제, 신니"],["에코파크",150,"정읍"]
+  ["포항",240,"대경"],["영천",210,""],["진천",230,"수정"],["충주",280,"천보"],["인천",300,"이영, ES케미칼"],
+  ["시흥",270,""],["화성",290,"대성스틸"],["부산",180,""],["나주",90,""],["울산",180,""],["군산",180,""],["코솔텍",240,""],
+  ["파주",330,""],["대구",180,""],["GS칼텍스",30,"GS"],["코리아써키트",300,"코리아, 이미지, 수처리","17:30",90],["물류탱크",300,""],["안산",295,""],["시내",30,"여수"],["청주",225,""],["대우선재",280,"대우선제, 신니"],["에코파크",150,"정읍"],
+  // 3~10월 거래명세서 거리(왕복 ÷ 2, 시속 70km 정도)로 추가
+  ["신송식품",230,"신송"],["육인테크",295,"육인"],["에스엔",295,""],["GS이앤알",290,"GS이엔알"],["BMB",295,"BMB2"],
+  ["동광산업",295,"동광"],["삼주시화",295,"시화"],["미주석문",265,"석문, 미주"],["지인전자",285,"세종, 지인"],["영주",325,"SK스페셜티"]
 ].map(([name,drive,alias,close="",work=null])=>({name,drive,alias,close,work}));
 const DEF_NOTES=[
   "☆점심시간 없이 연속 상차☆",
@@ -350,6 +353,10 @@ if((st.placesRev||0)<2){
   add(f("대죽"),"대산");add(f("인천"),"ES케미칼");
   const kc=f("코리아써키트");if(kc){if(kc.drive===270)kc.drive=300;if(kc.work===120)kc.work=90}
   st.placesRev=2}
+if(st.placesRev<3){   // 거래명세서 거리로 보정: 충주·신니 651km, 진천 수정 537km, 화성 670km, 안산 690km
+  const set=(n,from,to)=>{const p=st.places.find(x=>x.name===n);if(p&&p.drive===from)p.drive=to};
+  set("충주",270,280);set("대우선재",270,280);set("진천",240,230);set("화성",310,290);set("안산",270,295);
+  st.placesRev=3}
 {const u=st.places.find(p=>p.name==="울산");if(u&&u.drive===210)u.drive=180}
 // 삼주 당진공장은 따로 (20시 마감)
 {const dj=st.places.find(p=>p.name==="당진");if(dj&&/삼주/.test(dj.alias||""))dj.alias=dj.alias.replace(/삼주\s*,?\s*/,"").trim()}
@@ -466,7 +473,7 @@ function assign(){
     const pc=/익착/.test(r.place||"")?null:placeClose(r.place);
     if(pc!=null&&(due==null||pc<=due)){due=pc;hard=true}   // 하차 마감 - 작업 시간: 늦으면 안 됨
     const dd=(!hard&&r.arrDrive!=null)?r.arrDrive:d;   // 시간이 붙은 곳까지 걸리는 시간
-    if(due!=null&&dd!=null&&arrive(0,dd)>due){due=null;next=true}   // 1조로도 제시간에 못 닿으면 다음 날 착 (11/13 실제: 부산 10시착 → 13조)
+    if(due!=null&&dd!=null&&arrive(0,dd)>due+15){due=null;next=true}   // 1조로도 15분 넘게 늦으면 다음 날 착 (11/13 실제: 대우선재 12시는 1조, 부산 10시착은 13조)
     return {d,dd,w:r.want?r.want-1:null,due,next,hard}});
   const prev=R.map((r,i)=>{for(let j=i-1;j>=0;j--)if(R[j].no&&R[j].no===r.no)return j;return -1});
   // 같은 날 다음 탕이 있는 차(다른 곳 2회전, 또는 TDI 두 번째 탕이 익착이 아닌 차)는 신청 조를 지켜 준다
@@ -478,7 +485,7 @@ function assign(){
   const grp=R.map((r,i)=>r.pin&&info[i].w!=null?0:strong(i)&&info[i].w!=null?1:(info[i].due!=null&&info[i].dd!=null)?2:info[i].w!=null?3:4);
   const free=s=>occ[s].length<cap(s);
   const fits=(i,s)=>{const f=info[i];return f.due==null||f.dd==null||arrive(s,f.dd)<=f.due+(f.hard?0:st.slack)};
-  const ontime=(i,s)=>{const f=info[i];return f.due==null||f.dd==null||arrive(s,f.dd)<=f.due};
+  const ontime=(i,s)=>{const f=info[i];return f.due==null||f.dd==null||arrive(s,f.dd)<=f.due+(f.hard?0:15)};   // 15분 안쪽은 제시간으로 봄
   const es=i=>{const j=prev[i];if(j<0)return -Infinity;const p=res[j].slot;if(p==null)return null;
     const d=info[j].d;return d==null?START[p]+1:START[p]+st.load+2*d+2*restOf(d)};
   const done=new Set();
