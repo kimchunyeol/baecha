@@ -194,6 +194,7 @@ table.stat td.sum{font-weight:700}
 .restban .rnote{color:var(--muted);font-size:13px}
 table.tel td:last-child,table.tel th:last-child{text-align:left;font-family:var(--f-mono);user-select:all}
 table.tel td.none{color:var(--muted);font-family:var(--f-body);user-select:none}
+.holname:empty{display:none}
 .holname{color:var(--c3);font-weight:700;font-size:14px}
 .cal-day .n{font-family:var(--f-body);font-size:11px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:0 6px;white-space:nowrap}
 @media (max-width:600px){
@@ -397,7 +398,7 @@ body{margin:0}
 <div class="sheet" id="sFleet" hidden>
   <form class="box" id="fFleet">
     <h3>차량 목록</h3>
-    <p>한 줄에 한 대씩 <b>차번 기사이름 연락처</b>로 넣으세요. 이름과 연락처는 없어도 돼요. 카톡 글에는 나가지 않고, 로그인한 사람만 볼 수 있어요.</p>
+    <p>한 줄에 한 대씩 <b>차번 기사이름 연락처</b>로 넣으세요. 광진 일만 하는 차는 줄 끝에 <b>광진</b>을 쓰세요(상차만을 넘기면 광진 익착으로 들어가요). 이름과 연락처는 없어도 돼요. 카톡 글에는 나가지 않고, 로그인한 사람만 볼 수 있어요.</p>
     <textarea id="fleetTxt" class="mono full" rows="12" placeholder="2503 홍길동&#10;2636 김철수&#10;3611"></textarea>
     <div class="btns"><span class="left" id="fleetN"></span><button type="button" data-close>취소</button><button type="submit" class="primary">저장</button></div>
   </form>
@@ -577,7 +578,8 @@ const shiftMonth=n=>{const [y,m]=calMonth.split('-').map(Number);const d=new Dat
 $('#mPrev').onclick=()=>shiftMonth(-1);
 $('#mNext').onclick=()=>shiftMonth(1);
 $('#calGrid').onclick=e=>{const b=e.target.closest('[data-day]');if(b){cur=b.dataset.day;calMonth=cur.slice(0,7);_render();renderCal();setCal(false)}};
-function setCal(open){$('#cal').hidden=!open;$('#calToggle').setAttribute('aria-expanded',open);const sm=matchMedia('(max-width:600px)').matches;$('#calToggle').textContent=open?(sm?'달력 ▲':'달력 접기 ▲'):(sm?'달력 ▼':'달력 펴기 ▼');try{localStorage.setItem('baecha-cal',open?'1':'0')}catch(e){}}
+function setCal(open){$('#cal').hidden=!open;$('#calToggle').setAttribute('aria-expanded',open);const sm=matchMedia('(max-width:600px)').matches;$('#calToggle').textContent=open?(sm?'달력 ▲':'달력 접기 ▲'):(sm?'달력 ▼':'달력 펴기 ▼');
+  window.__calOpen=open;try{localStorage.setItem('baecha-cal',open?'1':'0')}catch(e){}}
 $('#clearDay').onclick=()=>{
   const b=$('#clearDay'), n=db.items.filter(i=>i.day===cur).length;
   if(!n)return;
@@ -677,7 +679,9 @@ $('#copyBtn').onclick=()=>{
 function doCarry(nd){
   let n=0;
   db.items.filter(i=>i.day===cur&&i.kind==='load'&&!i.carried).forEach(i=>{
-    db.items.push({id:db.next++,day:nd,group:i.group,kind:'unload',cars:[...i.cars],item:i.item,place:'',to:'',done:false,from:i.id});
+    const kjc=i.cars.filter(c=>i.group==='kj'||db.kjOnly.includes(c)), etc=i.cars.filter(c=>!kjc.includes(c));
+    if(kjc.length)db.items.push({id:db.next++,day:nd,group:'kj',kind:'unload',cars:kjc,item:i.item,place:'',to:'',done:false,from:i.id});
+    if(etc.length)db.items.push({id:db.next++,day:nd,group:i.group,kind:'unload',cars:etc,item:i.item,place:'',to:'',done:false,from:i.id});
     n+=i.cars.length; i.carried=true;
   });
   save(); cur=nd; render();
@@ -948,6 +952,8 @@ $('#fFleet').addEventListener('submit',()=>setTimeout(renderIdle,0));
 
 // ===== 기사 이름 / 쉬는 차 / 불러오기 / 기록 찾기 / 한 달 통계 / 엑셀 =====
 db.drivers=db.drivers||{}; db.rest=db.rest||{}; db.phones=db.phones||{}; db.pendBase=db.pendBase||{};
+// 광진 일만 하는 차: 상차만을 넘기면 광진 익착으로
+if(!Array.isArray(db.kjOnly))db.kjOnly=['2503','4450','5250','5294','7577','9904'];
 function restOf(d){return db.rest[d]||[]}
 
 // 차량 목록: "차번 이름" 한 줄씩
@@ -956,18 +962,19 @@ function parseFleet(t){
   t.split(/\n/).forEach(line=>{
     curC=null;
     line.trim().split(/[\s,]+/).filter(Boolean).forEach(tk=>{
-      if(/^\d{4}$/.test(tk)){curC={car:tk,name:'',tel:''};out.push(curC)}
+      if(/^\d{4}$/.test(tk)){curC={car:tk,name:'',tel:'',kj:false};out.push(curC)}
+      else if(curC&&/^\[?광진(전용)?\]?$/.test(tk)){curC.kj=true}
       else if(curC&&/^0\d{1,2}-?\d{3,4}-?\d{4}$/.test(tk)){const d=tk.replace(/\D/g,'');curC.tel=d.length===11?d.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3'):d.replace(/(\d{2,3})(\d{3,4})(\d{4})/,'$1-$2-$3')}
       else if(curC){curC.name=(curC.name+' '+tk).trim()}
     });
   });
-  const m=new Map(); out.forEach(o=>{const p=m.get(o.car);m.set(o.car,{name:o.name||(p&&p.name)||'',tel:o.tel||(p&&p.tel)||''})});
+  const m=new Map(); out.forEach(o=>{const p=m.get(o.car);m.set(o.car,{name:o.name||(p&&p.name)||'',tel:o.tel||(p&&p.tel)||'',kj:o.kj||!!(p&&p.kj)})});
   return m;
 }
 fleetCount=function(){$('#fleetN').textContent=`${parseFleet($('#fleetTxt').value).size}대`};
 $('#fleetTxt').addEventListener('input',()=>fleetCount()); // 예전 대수 세기(이름까지 셈)를 덮어씀
 openFleet=function(){
-  $('#fleetTxt').value=[...new Set(db.fleet||[])].sort().map(c=>`${c} ${db.drivers[c]||''} ${db.phones[c]||''}`.replace(/\s+/g,' ').trim()).join('\n');
+  $('#fleetTxt').value=[...new Set(db.fleet||[])].sort().map(c=>`${c} ${db.drivers[c]||''} ${db.phones[c]||''} ${db.kjOnly.includes(c)?'광진':''}`.replace(/\s+/g,' ').trim()).join('\n');
   fleetCount(); show('#sFleet');
 };
 $('#fleetBtn').onclick=openFleet;
@@ -975,7 +982,7 @@ $('#fFleet').onsubmit=e=>{
   e.preventDefault();
   const m=parseFleet($('#fleetTxt').value);
   db.fleet=[...m.keys()];
-  const dr={},ph={}; m.forEach((v,c)=>{if(v.name)dr[c]=v.name;if(v.tel)ph[c]=v.tel}); db.drivers=dr; db.phones=ph;
+  const dr={},ph={},kj=[]; m.forEach((v,c)=>{if(v.name)dr[c]=v.name;if(v.tel)ph[c]=v.tel;if(v.kj)kj.push(c)}); db.drivers=dr; db.phones=ph; db.kjOnly=kj.sort();
   save(); $('#sFleet').hidden=true;
   if(!$('#sEdit').hidden)renderPicker();
   render();
@@ -1212,7 +1219,7 @@ const FB_CFG={apiKey:"AIzaSyAtSMKAHlQbfD7bibYCFsnJjva33RXVJCQ",authDomain:"baech
 const FB_VER='10.14.1', BOARD='main';
 const Sync={dirty:{},on:false,fs:null,ref:null,last:{},lastSet:'',timer:null,unsub:[],from:'0000',oldLoaded:false,oldLoading:null};
 const dayJSON=d=>JSON.stringify({items:db.items.filter(i=>i.day===d),rest:restOf(d)});
-const setJSON=()=>JSON.stringify({fleet:db.fleet||[],drivers:db.drivers||{},phones:db.phones||{},hol:db.hol||{},fleetSeeded:db.fleetSeeded||0});
+const setJSON=()=>JSON.stringify({fleet:db.fleet||[],drivers:db.drivers||{},phones:db.phones||{},kjOnly:db.kjOnly||[],hol:db.hol||{},fleetSeeded:db.fleetSeeded||0});
 function allDays(){return new Set([...db.items.map(i=>i.day),...Object.keys(db.rest||{})])}
 function showFresh(cache){if(!Sync.on)return;const d=new Date();syncState(cache?'busy':'on',cache?'다시 연결 중…':'연동됨')}
 function syncState(cls,txt){const s=$('#sync');s.hidden=false;s.className='sync '+cls;
@@ -1314,9 +1321,10 @@ function applySettings(s){
   if(!s)return false;
   // 예전 버전 기기가 연락처 없이 저장했으면, 이 기기의 연락처를 지키고 다시 올림
   let restore=false; if(!('phones' in s)&&Object.keys(db.phones||{}).length){s={...s,phones:db.phones};restore=true}
-  const j=JSON.stringify({fleet:s.fleet||[],drivers:s.drivers||{},phones:s.phones||{},hol:s.hol||{},fleetSeeded:s.fleetSeeded||0});
+  if(!('kjOnly' in s)){s={...s,kjOnly:db.kjOnly||[]};restore=true}
+  const j=JSON.stringify({fleet:s.fleet||[],drivers:s.drivers||{},phones:s.phones||{},kjOnly:s.kjOnly||[],hol:s.hol||{},fleetSeeded:s.fleetSeeded||0});
   Sync.lastSet=restore?'':j; if(j===setJSON()){if(restore)setTimeout(()=>Sync.on&&pushChanges(),500);return false}
-  db.fleet=s.fleet||[];db.drivers=s.drivers||{};db.phones=s.phones||{};db.hol=s.hol||{};db.fleetSeeded=s.fleetSeeded||db.fleetSeeded;
+  db.fleet=s.fleet||[];db.drivers=s.drivers||{};db.phones=s.phones||{};db.kjOnly=s.kjOnly||[];db.hol=s.hol||{};db.fleetSeeded=s.fleetSeeded||db.fleetSeeded;
   if(restore){Sync.lastSet='';setTimeout(()=>Sync.on&&pushChanges(),500)}
   return true;
 }
@@ -1466,6 +1474,8 @@ function renderTel(){
 $('#telBtn').onclick=()=>{$('#telQ').value='';renderTel();show('#sTel')};
 $('#telQ').addEventListener('input',renderTel);
 
+// 화면을 돌리거나 크기를 바꾸면 달력 버튼 글자도 맞춤
+matchMedia('(max-width:600px)').addEventListener('change',()=>setCal(!!window.__calOpen&&!$('#cal').hidden));
 render();
 </script>
 </body>
